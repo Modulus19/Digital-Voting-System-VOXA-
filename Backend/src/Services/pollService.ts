@@ -6,7 +6,7 @@ interface CreatePollInput {
   question: string;
   options: { text: string }[];
   resultsVisibility: ResultsVisibility;
-  creator: Types.ObjectId;
+  creator: string;
 }
 
 export const createPollService = async (
@@ -82,7 +82,7 @@ export const getPollByIdService = async ({
 
  interface UpdatePollInput {
    id: string;
-  requesterId: Types.ObjectId;
+  requesterId: string;
    updates: Partial<{
      question: string;
      options: { text: string }[];
@@ -121,7 +121,7 @@ export const getPollByIdService = async ({
 
 interface DeletePollInput {
   id: string;
-  requesterId: Types.ObjectId;
+  requesterId: string;
 }
 
 export const deletePollService = async ({
@@ -164,7 +164,7 @@ export const deletePollService = async ({
  
 interface PublishPollInput {
   id: string;
-  requesterId: Types.ObjectId;
+  requesterId: string;
 }
 
 export const publishPollService = async ({
@@ -194,7 +194,7 @@ export const publishPollService = async ({
 
 interface ClosePollInput {
   id: string;
-  requesterId: Types.ObjectId;
+  requesterId: string;
 }
 
 export const closePollService = async ({

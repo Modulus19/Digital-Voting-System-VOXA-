@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../Middleware/auth.js';
-import { sendSuccess, sendError } from '../utils/responses.js';
+import { Request } from 'express';
+import { sendSuccess, sendError } from '../Utils/responses.js';
 import {  
   createPollService,
   getPollsService,
@@ -18,7 +18,7 @@ import {
 } from '../Services/pollService.js';
 
 
-export const createPoll = async (req: AuthenticatedRequest, res: Response) => {
+export const createPoll = async (req: Request, res: Response) => {
   try {
     const { question, options, resultsVisibility } = req.body;
 
@@ -36,7 +36,7 @@ export const createPoll = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getPolls = async (req: AuthenticatedRequest, res: Response) => {
+export const getPolls = async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -51,7 +51,7 @@ export const getPolls = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getPollById = async (req: AuthenticatedRequest, res: Response) => {
+export const getPollById = async (req:Request, res: Response) => {
   try {
     const isAdmin = req.user?.role === 'admin';
     const poll = await getPollByIdService({ id: req.params.id as string, isAdmin });
@@ -72,7 +72,7 @@ export const getPollById = async (req: AuthenticatedRequest, res: Response) => {
 
 
 
-export const updatePoll = async (req: AuthenticatedRequest, res: Response) => {
+export const updatePoll = async (req:Request, res: Response) => {
   try {
     const poll = await updatePollService({
       id: req.params.id as string,
@@ -101,7 +101,7 @@ export const updatePoll = async (req: AuthenticatedRequest, res: Response) => {
 };
 
  
-export const deletePoll = async (req: AuthenticatedRequest, res: Response) => {
+export const deletePoll = async (req: Request, res: Response) => {
   try {
     const deleted = await deletePollService({
       id: req.params.id as string,
@@ -129,7 +129,7 @@ export const deletePoll = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 
-export const publishPoll = async (req: AuthenticatedRequest, res: Response) => {
+export const publishPoll = async (req: Request, res: Response) => {
   try {
     const poll = await publishPollService({
       id: req.params.id as string,
@@ -156,7 +156,7 @@ export const publishPoll = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const closePoll = async (req: AuthenticatedRequest, res: Response) => {
+export const closePoll = async (req: Request, res: Response) => {
   try {
     const poll = await closePollService({
       id: req.params.id as string,
