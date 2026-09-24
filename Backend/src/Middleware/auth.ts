@@ -1,30 +1,55 @@
-import { Request, Response, NextFunction } from 'express';
-import { Types } from 'mongoose';
-import { sendError } from '../utils/responses.js';
-
-
-const STUB_USER_ID = new Types.ObjectId('64f000000000000000000001');
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: Types.ObjectId;
-    email: string;
-    role: 'admin' | 'voter';
-  };
-}
+import type { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import type { AccessTokenPayload } from "../Types/auth.types.js";
 
 export const authenticate = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
+  const authorizationHeader = req.headers.authorization;
 
-  if (!req.user) {
-    req.user = {
-      id: STUB_USER_ID,
-      email: 'stub@example.com',
-      role: 'admin',
-    };
+  if (!authorizationHeader) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required",
+      data: null,
+    });
+    return;
   }
 
-  next();
+  const [scheme, token] = authorizationHeader.split(" ");
+
+  if (scheme !== "Bearer" || !token) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid authorization header",
+      data: null,
+    });
+    return;
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is not defined in the environment variables");
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret) as AccessTokenPayload;
+
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
+    next();
+  } catch {
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired access token",
+      data: null,
+    });
+  }
 };

@@ -1,17 +1,28 @@
-import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './auth.js';
-import { sendError } from '../utils/responses.js';
+import type { NextFunction, Request, Response } from "express";
+import type { UserRole } from "../Models/user.model.js";
 
-// Restricts a route to specific roles. Must run after `authenticate`,
-// since it depends on req.user already being set.
-export const authorize = (...allowedRoles: Array<'admin' | 'voter'>) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const authorize = (...allowedRoles: UserRole[]) => {
+  return (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void => {
     if (!req.user) {
-      return sendError(res, 'Not authenticated', 401);
+      res.status(401).json({
+        success: false,
+        message: "Authentication required",
+        data: null,
+      });
+      return;
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return sendError(res, 'Not authorized to perform this action', 403);
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action",
+        data: null,
+      });
+      return;
     }
 
     next();
