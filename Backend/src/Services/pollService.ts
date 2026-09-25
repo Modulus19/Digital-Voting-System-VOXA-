@@ -1,6 +1,5 @@
 import Poll, { IPoll, PollStatus, ResultsVisibility } from '../Models/poll.model.js';
-import { Types, connection } from 'mongoose';
-
+import mongoose, { Types } from 'mongoose';
 
 interface CreatePollInput {
   question: string;
@@ -18,6 +17,7 @@ export const createPollService = async (
 interface GetPollsInput {
   page: number;
   limit: number;
+  requesterId: string;
   isAdmin: boolean;
 }
 
@@ -34,12 +34,18 @@ interface GetPollsResult {
 export const getPollsService = async ({
   page,
   limit,
+  requesterId,
   isAdmin,
 }: GetPollsInput): Promise<GetPollsResult> => {
   const skip = (page - 1) * limit;
-  const filter: { status?: { $in: PollStatus[] } } = isAdmin
-     ? {}
-     : { status: { $in: ['published', 'closed'] } };
+  const filter: any = isAdmin
+    ? {}
+    : {
+        $or: [
+          { status: { $in: ['published', 'closed'] } },
+          { creator: requesterId },
+        ],
+      };
 
   const [polls, total] = await Promise.all([
     Poll.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -59,56 +65,60 @@ export const getPollsService = async ({
 
 interface GetPollByIdInput {
   id: string;
+  requesterId: string;
   isAdmin: boolean;
 }
 
 export const getPollByIdService = async ({
   id,
+  requesterId,
   isAdmin,
 }: GetPollByIdInput): Promise<IPoll | null> => {
-
   if (!Types.ObjectId.isValid(id)) {
     throw new InvalidPollIdError('Invalid poll ID format');
   }
-  const poll = await Poll.findById(id);
 
+  const poll = await Poll.findById(id);
   if (!poll) return null;
 
-  
-  if (!isAdmin && poll.status === 'draft') return null;
+  if (!isAdmin && poll.status === 'draft' && !poll.creator.equals(requesterId)) {
+    return null;
+  }
 
   return poll;
 };
 
- interface UpdatePollInput {
-   id: string;
+interface UpdatePollInput {
+  id: string;
   requesterId: string;
-   updates: Partial<{
-     question: string;
-     options: { text: string }[];
-     resultsVisibility: ResultsVisibility;
-   }>;
- }
+  isAdmin: boolean;
+  updates: Partial<{
+    question: string;
+    options: { text: string }[];
+    resultsVisibility: ResultsVisibility;
+  }>;
+}
 
- export const updatePollService = async ({
-   id,
+export const updatePollService = async ({
+  id,
   requesterId,
-   updates,
- }: UpdatePollInput): Promise<IPoll | null> => {
-   if (!Types.ObjectId.isValid(id)) {
-     throw new InvalidPollIdError('Invalid poll ID format');
-   }
-
-   const poll = await Poll.findById(id);
-   if (!poll) return null;
-
-  if (!poll.creator.equals(requesterId)) {
-    throw new NotPollOwnerError('Only the poll creator can edit this poll');
+  isAdmin,
+  updates,
+}: UpdatePollInput): Promise<IPoll | null> => {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new InvalidPollIdError('Invalid poll ID format');
   }
 
-   if (poll.status !== 'draft') {
-     throw new PollNotDraftError('Only draft polls can be edited');
-   }
+  const poll = await Poll.findById(id);
+  if (!poll) return null;
+
+  if (!poll.creator.equals(requesterId) && !isAdmin) {
+    throw new NotPollOwnerError('Only the poll creator or a site admin can edit this poll');
+  }
+
+  if (poll.status !== 'draft') {
+    throw new PollNotDraftError('Only draft polls can be edited');
+  }
 
   const allowedFields = ['question', 'options', 'resultsVisibility'] as const;
   for (const field of allowedFields) {
@@ -116,17 +126,20 @@ export const getPollByIdService = async ({
       (poll as any)[field] = updates[field];
     }
   }
-   return poll.save();
- };
+
+  return poll.save();
+};
 
 interface DeletePollInput {
   id: string;
   requesterId: string;
+  isAdmin: boolean;
 }
 
 export const deletePollService = async ({
   id,
   requesterId,
+  isAdmin,
 }: DeletePollInput): Promise<boolean> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new InvalidPollIdError('Invalid poll ID format');
@@ -135,41 +148,39 @@ export const deletePollService = async ({
   const poll = await Poll.findById(id);
   if (!poll) return false;
 
-  if (!poll.creator.equals(requesterId)) {
-    throw new NotPollOwnerError('Only the poll creator can delete this poll');
+  if (!poll.creator.equals(requesterId) && !isAdmin) {
+    throw new NotPollOwnerError('Only the poll creator or a site admin can delete this poll');
   }
 
-  // Votes collection is owned by a different module (not yet built as of
-  // this writing) — queried by raw collection name rather than a Mongoose
-  // model import, since no Vote model file exists in this codebase yet.
-  // Assumes: collection name "votes", field "poll" referencing Poll._id.
-  // CONFIRM these two assumptions with whoever owns the votes module.
-  if (!connection.db) {
-    throw new Error('Database connection not established');
-  }
-  const voteCount = await connection.db
-    .collection('votes')
-    .countDocuments({ poll: poll._id });
+  if (!isAdmin) {
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not established');
+    }
+    const voteCount = await mongoose.connection.db
+      .collection('votes')
+      .countDocuments({ poll: poll._id });
 
-  if (voteCount > 0) {
-    throw new PollHasVotesError(
-      'Cannot delete a poll that already has votes. Close it instead.'
-    );
+    if (voteCount > 0) {
+      throw new PollHasVotesError(
+        'Cannot delete a poll that already has votes. Close it instead.'
+      );
+    }
   }
 
   await poll.deleteOne();
   return true;
 };
 
- 
 interface PublishPollInput {
   id: string;
   requesterId: string;
+  isAdmin: boolean;
 }
 
 export const publishPollService = async ({
   id,
   requesterId,
+  isAdmin,
 }: PublishPollInput): Promise<IPoll | null> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new InvalidPollIdError('Invalid poll ID format');
@@ -178,14 +189,12 @@ export const publishPollService = async ({
   const poll = await Poll.findById(id);
   if (!poll) return null;
 
-  if (!poll.creator.equals(requesterId)) {
-    throw new NotPollOwnerError('Only the poll creator can publish this poll');
+  if (!poll.creator.equals(requesterId) && !isAdmin) {
+    throw new NotPollOwnerError('Only the poll creator or a site admin can publish this poll');
   }
 
   if (poll.status !== 'draft') {
-    throw new PollAlreadyPublishedError(
-      'Only draft polls can be published'
-    );
+    throw new PollAlreadyPublishedError('Only draft polls can be published');
   }
 
   poll.status = 'published';
@@ -195,11 +204,13 @@ export const publishPollService = async ({
 interface ClosePollInput {
   id: string;
   requesterId: string;
+  isAdmin: boolean;
 }
 
 export const closePollService = async ({
   id,
   requesterId,
+  isAdmin,
 }: ClosePollInput): Promise<IPoll | null> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new InvalidPollIdError('Invalid poll ID format');
@@ -208,14 +219,12 @@ export const closePollService = async ({
   const poll = await Poll.findById(id);
   if (!poll) return null;
 
-  if (!poll.creator.equals(requesterId)) {
-    throw new NotPollOwnerError('Only the poll creator can close this poll');
+  if (!poll.creator.equals(requesterId) && !isAdmin) {
+    throw new NotPollOwnerError('Only the poll creator or a site admin can close this poll');
   }
 
   if (poll.status !== 'published') {
-    throw new PollNotPublishedError(
-      'Only published polls can be closed'
-    );
+    throw new PollNotPublishedError('Only published polls can be closed');
   }
 
   poll.status = 'closed';

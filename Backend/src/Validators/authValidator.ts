@@ -1,5 +1,6 @@
 export interface RegisterInput {
   email: string;
+  username: string;
   password: string;
 }
 
@@ -33,10 +34,18 @@ const emailRegex =
 export const validateRegisterInput = (
   data: Partial<RegisterInput>
 ): string | null => {
-  const { email, password } = data;
+  const { email, username, password } = data;
 
   if (!email || !emailRegex.test(email)) {
     return "Invalid email address";
+  }
+
+  if (!username || username.trim().length === 0) {
+    return "Username is required";
+  }
+
+  if (username.trim().length > 30) {
+    return "Username must be under 30 characters";
   }
 
   if (!password || password.length < 8) {

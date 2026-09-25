@@ -4,6 +4,7 @@ export type UserRole = "user" | "admin";
 
 export interface IUser extends Document {
   email: string;
+  username: string;
   passwordHash: string;
   role: UserRole;
   emailVerified: boolean;
@@ -18,6 +19,12 @@ const userSchema = new Schema<IUser>(
       required: true,
       unique: true,
       lowercase: true,
+      trim: true,
+    },
+
+    username: {
+      type: String,
+      required: true,
       trim: true,
     },
 
