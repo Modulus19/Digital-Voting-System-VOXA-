@@ -36,10 +36,7 @@ export const authenticate = (
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      jwtSecret
-    ) as AccessTokenPayload;
+    const decoded = jwt.verify(token, jwtSecret) as AccessTokenPayload;
 
     req.user = {
       id: decoded.id,
