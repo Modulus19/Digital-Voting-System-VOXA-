@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { sendError } from '../utils/responses.js';
+import { sendError } from '../Utils/responses.js';
 
 const VALID_RESULTS_VISIBILITY = ['after_vote', 'after_close', 'admin_only'];
 

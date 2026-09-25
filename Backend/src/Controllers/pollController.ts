@@ -1,7 +1,6 @@
-import { Response } from 'express';
-import { Request } from 'express';
+import { Response, Request } from 'express';
 import { sendSuccess, sendError } from '../Utils/responses.js';
-import {  
+import {
   createPollService,
   getPollsService,
   getPollByIdService,
@@ -16,7 +15,6 @@ import {
   PollAlreadyPublishedError,
   PollNotPublishedError,
 } from '../Services/pollService.js';
-
 
 export const createPoll = async (req: Request, res: Response) => {
   try {
@@ -42,7 +40,12 @@ export const getPolls = async (req: Request, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const isAdmin = req.user?.role === 'admin';
 
-    const result = await getPollsService({ page, limit, isAdmin });
+    const result = await getPollsService({
+      page,
+      limit,
+      requesterId: req.user!.id,
+      isAdmin,
+    });
 
     return sendSuccess(res, result);
   } catch (error) {
@@ -51,10 +54,14 @@ export const getPolls = async (req: Request, res: Response) => {
   }
 };
 
-export const getPollById = async (req:Request, res: Response) => {
+export const getPollById = async (req: Request, res: Response) => {
   try {
     const isAdmin = req.user?.role === 'admin';
-    const poll = await getPollByIdService({ id: req.params.id as string, isAdmin });
+    const poll = await getPollByIdService({
+      id: req.params.id as string,
+      requesterId: req.user!.id,
+      isAdmin,
+    });
 
     if (!poll) {
       return sendError(res, 'Poll not found', 404);
@@ -70,13 +77,12 @@ export const getPollById = async (req:Request, res: Response) => {
   }
 };
 
-
-
-export const updatePoll = async (req:Request, res: Response) => {
+export const updatePoll = async (req: Request, res: Response) => {
   try {
     const poll = await updatePollService({
       id: req.params.id as string,
       requesterId: req.user!.id,
+      isAdmin: req.user?.role === 'admin',
       updates: req.body,
     });
 
@@ -100,12 +106,12 @@ export const updatePoll = async (req:Request, res: Response) => {
   }
 };
 
- 
 export const deletePoll = async (req: Request, res: Response) => {
   try {
     const deleted = await deletePollService({
       id: req.params.id as string,
       requesterId: req.user!.id,
+      isAdmin: req.user?.role === 'admin',
     });
 
     if (!deleted) {
@@ -128,12 +134,12 @@ export const deletePoll = async (req: Request, res: Response) => {
   }
 };
 
-
 export const publishPoll = async (req: Request, res: Response) => {
   try {
     const poll = await publishPollService({
       id: req.params.id as string,
       requesterId: req.user!.id,
+      isAdmin: req.user?.role === 'admin',
     });
 
     if (!poll) {
@@ -161,6 +167,7 @@ export const closePoll = async (req: Request, res: Response) => {
     const poll = await closePollService({
       id: req.params.id as string,
       requesterId: req.user!.id,
+      isAdmin: req.user?.role === 'admin',
     });
 
     if (!poll) {

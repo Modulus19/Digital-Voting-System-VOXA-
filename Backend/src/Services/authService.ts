@@ -17,6 +17,8 @@ export const registerUser = async (
   const email =
     data.email.trim().toLowerCase();
 
+  const username = data.username.trim();
+
   const { password } = data;
 
   const existingUser =
@@ -38,6 +40,7 @@ export const registerUser = async (
 
   const user = await User.create({
     email,
+    username,
     passwordHash,
     role: "user",
     emailVerified: false,
@@ -59,6 +62,7 @@ export const registerUser = async (
   return {
     id: user._id.toString(),
     email: user.email,
+    username: user.username,
     role: user.role,
     emailVerified:
       user.emailVerified,
@@ -112,6 +116,7 @@ export const loginUser = async (
     user: {
       id: user._id.toString(),
       email: user.email,
+      username: user.username,
       role: user.role,
       emailVerified:
         user.emailVerified,
