@@ -4,6 +4,7 @@ export type PollStatus = 'draft' | 'published' | 'closed';
 export type ResultsVisibility = 'after_vote' | 'after_close' | 'admin_only';
 
 export interface IPollOption {
+  _id: Types.ObjectId;
   text: string;
 }
 
