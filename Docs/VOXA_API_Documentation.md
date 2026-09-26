@@ -1,373 +1,391 @@
-# VOXA API Documentation
+# VOXA Backend API Documentation
 
-> Digital Voting System — Backend API Contract
-
-## 1. Base URL
+## Base URL
 
 Local development:
 
 http://localhost:5000/api
 
-Example:
+Production:
 
-GET http://localhost:5000/api/polls
+Replace with the deployed backend URL.
 
-## 2. Authentication
+# Authentication
 
-VOXA uses JWT Bearer authentication for protected endpoints.
+Most protected endpoints require a JWT access token.
 
-Authorization: Bearer <ACCESS_TOKEN>
-Content-Type: application/json
+Send the token using:
 
-## 3. Standard Response Format
+Authorization: Bearer YOUR_ACCESS_TOKEN
 
-Successful:
+## 1. Register
 
-json
-{ "success": true, "message": "Operation successful", "data": {} }
+### POST
 
-Error:
+/api/auth/register
 
-json
-{ "success": false, "message": "Something went wrong", "data": null }
+### Body
 
-## 4. Authentication Endpoints
-
-Mounted under /api/auth.
-
-| Method | Endpoint                  | Purpose                    |
-| ------ | ------------------------- | -------------------------- |
-| POST   | /auth/register            | Create an account          |
-| POST   | /auth/verify-email        | Verify email OTP           |
-| POST   | /auth/resend-verification | Resend verification OTP    |
-| POST   | /auth/login               | Login and receive JWT      |
-| POST   | /auth/forgot-password     | Request password reset OTP |
-| POST   | /auth/verify-reset-otp    | Verify reset OTP           |
-| POST   | /auth/reset-password      | Set a new password         |
-
-A newly registered user must verify their email before logging in.
-
-## 5. User Endpoints
-
-### Get Current User
-
-GET /api/users/me
-
-Authentication required.
-
-Possible roles:
-
-text
-user
-admin
-
-## 6. Poll Endpoints
-
-Mounted under /api/polls.
-
-### Create Poll
-
-POST /api/polls
-
-Example body:
-
-json
 {
-"question": "Which feature should VOXA prioritize?",
-"options": [
-{ "text": "Voting" },
-{ "text": "Results" },
-{ "text": "User Management" }
-],
-"resultsVisibility": "after_vote"
+"email": "user@example.com",
+"username": "john",
+"password": "password123"
 }
 
-Supported visibility values:
+### Notes
 
-text
+- A new account is created with the role user.
+- Email verification is required before login.
+- Users cannot register themselves as administrators.
+
+## 2. Verify Email
+
+### POST
+
+/api/auth/verify-email
+
+### Body
+
+{
+"email": "user@example.com",
+"otp": "123456"
+}
+
+## 3. Resend Verification OTP
+
+### POST
+
+/api/auth/resend-verification
+
+### Body
+
+{
+"email": "user@example.com"
+}
+
+# Login
+
+## POST
+
+/api/auth/login
+
+### Body
+
+{
+"email": "user@example.com",
+"password": "password123"
+}
+
+### Successful response
+
+The response contains an access token.
+
+{
+"success": true,
+"data": {
+"user": {
+"id": "...",
+"email": "user@example.com",
+"username": "john",
+"role": "user",
+"emailVerified": true
+},
+"accessToken": "..."
+}
+}
+
+The frontend should store the access token and send it with protected requests.
+
+# Current User
+
+## GET
+
+/api/auth/me
+
+### Authentication
+
+Required.
+
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+Returns the currently authenticated user's information.
+
+# Password Reset
+
+## Forgot Password
+
+### POST
+
+/api/auth/forgot-password
+
+### Body
+
+{
+"email": "user@example.com"
+}
+
+## Verify Reset OTP
+
+### POST
+
+/api/auth/verify-reset-otp
+
+### Body
+
+{
+"email": "user@example.com",
+"otp": "123456"
+}
+
+## Reset Password
+
+### POST
+
+/api/auth/reset-password
+
+### Body
+
+{
+"resetToken": "RESET_TOKEN",
+"newPassword": "newpassword123"
+}
+
+# Polls
+
+All poll endpoints require authentication.
+
+## Create Poll
+
+### POST
+
+/api/polls
+
+### Body
+
+{
+"question": "Which feature should admins monitor most?",
+"options": [
+{
+"text": "User Activity"
+},
+{
+"text": "Poll Activity"
+},
+{
+"text": "Voting Activity"
+}
+],
+"resultsVisibility": "admin_only"
+}
+
+### Possible resultsVisibility values
+
 after_vote
 after_close
 admin_only
 
-New polls start as draft.
+## Get Polls
 
-### Get Polls
+### GET
 
-GET /api/polls
+/api/polls
 
-Optional query parameters may include page and limit.
+Optional query parameters:
 
-### Get Poll
+/api/polls?page=1&limit=10
 
-GET /api/polls/:id
+## Get Single Poll
 
-### Update Poll
+### GET
 
-PATCH /api/polls/:id
+/api/polls/:id
 
-Only the poll creator or an administrator should manage the poll.
+Example:
 
-### Delete Poll
+/api/polls/6ab732e789435e0e68ca1025
 
-DELETE /api/polls/:id
+## Update Poll
 
-### Publish Poll
+### PATCH
 
-PATCH /api/polls/:id/publish
+/api/polls/:id
 
-Changes a draft poll to published.
+Example body:
 
-### Close Poll
-
-PATCH /api/polls/:id/close
-
-Changes a published poll to closed.
-
-## 7. Poll Statuses
-
-| Status    | Meaning                              |
-| --------- | ------------------------------------ |
-| draft     | Being prepared; cannot receive votes |
-| published | Active; can receive votes            |
-| closed    | Voting has ended                     |
-
-## 8. Voting
-
-### Submit Vote
-
-POST /api/polls/:pollId/vote
-
-Authentication required.
-
-Body:
-
-json
-{ "selectedOption": "OPTION_ID" }
-
-The backend enforces that the poll exists, is published, the option belongs to the poll, and the user has not already voted.
-
-Duplicate vote response:
-
-json
 {
-"success": false,
-"message": "You have already voted on this poll.",
-"data": null
+"question": "Updated question"
 }
 
-### Vote History
+## Delete Poll
 
-GET /api/votes/history
+### DELETE
 
-Authentication required.
+/api/polls/:id
 
-## 9. Results
+## Publish Poll
 
-### Get Poll Results
+### PATCH
 
-GET /api/polls/:pollId/results
+/api/polls/:id/publish
 
-Authentication required.
+A poll must be published before users can vote.
 
-### after_vote
+## Close Poll
 
-The user must have voted before results are available.
+### PATCH
 
-### after_close
+/api/polls/:id/close
 
-Results remain hidden until the poll is closed.
+# Voting
 
-Before closing:
+## Submit Vote
 
-json
+### POST
+
+/api/polls/:pollId/vote
+
+### Authentication
+
+Required.
+
+### Body
+
 {
-"success": false,
-"message": "Results will be available after the poll is closed.",
-"data": null
+"selectedOption": "OPTION_ID"
 }
+
+Example:
+
+POST /api/polls/6ab732e789435e0e68ca1025/vote
+
+{
+"selectedOption": "6ab732e789435e0e68ca1026"
+}
+
+### Important
+
+A user can vote only once per poll.
+
+The poll must have:
+
+status = published
+
+# Vote History
+
+## GET
+
+/api/votes/history
+
+### Authentication
+
+Required.
+
+Returns the authenticated user's voting history.
+
+# Poll Results
+
+## GET
+
+/api/polls/:pollId/results
+
+### Authentication
+
+Required.
+
+Example:
+
+GET /api/polls/6ab732e789435e0e68ca1025/results
+
+## Results Visibility
 
 ### admin_only
 
 Only administrators can view the results.
 
-json
-{
-"success": false,
-"message": "Only administrators can view the results of this poll.",
-"data": null
-}
+### after_vote
 
-### Successful Results Response
+A user must vote before viewing the results.
 
-json
+### after_close
+
+Results become available after the poll has been closed.
+
+## Example Results Response
+
 {
 "success": true,
 "message": "Poll results retrieved successfully",
 "data": {
 "poll": {
-"id": "POLL_ID",
-"question": "Which feature should VOXA prioritize?",
+"id": "6ab732e789435e0e68ca1025",
+"question": "Which feature should admins monitor most?",
 "status": "published",
-"resultsVisibility": "after_vote"
+"resultsVisibility": "admin_only"
 },
-"totalVotes": 4,
+"totalVotes": 0,
 "results": [
 {
-"optionId": "OPTION_ID_1",
-"option": "Voting",
-"votes": 3,
-"percentage": 75
+"optionId": "6ab732e789435e0e68ca1026",
+"option": "User Activity",
+"votes": 0,
+"percentage": 0
+},
+{
+"optionId": "6ab732e789435e0e68ca1027",
+"option": "Poll Activity",
+"votes": 0,
+"percentage": 0
+},
+{
+"optionId": "6ab732e789435e0e68ca1028",
+"option": "Voting Activity",
+"votes": 0,
+"percentage": 0
 }
 ]
 }
 }
 
-## 10. HTTP Status Codes
+# Authentication Header
 
-| Status | Meaning                         |
-| -----: | ------------------------------- |
-|    200 | Successful                      |
-|    201 | Created                         |
-|    400 | Invalid input                   |
-|    401 | Authentication required/invalid |
-|    403 | Not permitted                   |
-|    404 | Not found                       |
-|    409 | Conflict, e.g. duplicate vote   |
-|    500 | Server error                    |
+For protected endpoints, the frontend should send:
 
-## 11. Recommended Frontend Structure
+Authorization: Bearer ACCESS_TOKEN
 
-text
-src/
-└── services/
-├── api.js
-├── authApi.js
-├── userApi.js
-├── pollApi.js
-├── voteApi.js
-└── resultApi.js
+Example Axios configuration:
 
-Example API helper:
-
-js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-export const apiRequest = async (endpoint, options = {}) => {
+ts
 const token = localStorage.getItem("accessToken");
 
-const response = await fetch(${API_BASE_URL}${endpoint}, {
-...options,
+const response = await axios.get(${API_URL}/polls, {
 headers: {
-"Content-Type": "application/json",
-...(token ? { Authorization: Bearer ${token} } : {}),
-...options.headers,
+Authorization: Bearer ${token},
 },
 });
 
-const data = await response.json();
+# Important Frontend Rules
 
-if (!response.ok) {
-throw new Error(data.message || "Request failed");
+1. Do not expose JWT_SECRET.
+2. Do not expose MongoDB credentials.
+3. Do not allow users to choose the admin role during registration.
+4. Store the access token after successful login.
+5. Send the access token with protected requests.
+6. Handle 401 responses by redirecting the user to login.
+7. Handle 403 responses as permission/authorization errors.
+8. A poll must be published before voting.
+9. A user can vote only once per poll.
+10. Results visibility depends on the poll's resultsVisibility setting.
+
+# API Health Check
+
+### GET
+
+/api/health
+
+Expected response:
+
+{
+"success": true,
+"message": "VOXA API is running",
+"data": null
 }
-
-return data;
-};
-
-## 12. Frontend Environment Variable
-
-Frontend/.env:
-
-env
-VITE_API_BASE_URL=http://localhost:5000/api
-
-Frontend/.env.example:
-
-env
-VITE_API_BASE_URL=http://localhost:5000/api
-
-Do not put backend secrets or database credentials in frontend environment variables.
-
-## 13. Frontend Flow
-
-### Registration
-
-text
-Register → Verify Email → Login → Receive JWT → Dashboard
-
-### Voting
-
-text
-Browse polls → Open poll → Select option → Submit vote → Show result when permitted
-
-### Results
-
-text
-Request results → Backend checks visibility → Display counts and percentages
-
-## 14. Important Frontend Rules
-
-The frontend should not rely only on frontend validation. The backend is authoritative for:
-
-- Authentication
-- Authorization
-- Poll ownership
-- Poll status
-- Valid options
-- Duplicate-vote prevention
-- Result visibility
-- Admin permissions
-
-## 15. Integration Checklist
-
-- [ ] Register
-- [ ] Verify email
-- [ ] Login
-- [ ] Store JWT
-- [ ] Send Bearer token
-- [ ] Create poll
-- [ ] View polls
-- [ ] View a poll
-- [ ] Publish poll
-- [ ] Vote
-- [ ] Prevent duplicate vote
-- [ ] View vote history
-- [ ] Test after_vote results
-- [ ] Test after_close results
-- [ ] Test admin_only results
-- [ ] Handle loading states
-- [ ] Handle empty states
-- [ ] Handle API errors
-
-## 16. Postman Collection
-
-Recommended collection structure:
-
-text
-VOXA API
-├── Auth
-│ ├── Register
-│ ├── Verify Email
-│ ├── Resend Verification
-│ ├── Login
-│ ├── Forgot Password
-│ ├── Verify Reset OTP
-│ └── Reset Password
-├── Users
-│ └── Get Current User
-├── Polls
-│ ├── Create
-│ ├── Get All
-│ ├── Get One
-│ ├── Update
-│ ├── Delete
-│ ├── Publish
-│ └── Close
-├── Voting
-│ ├── Cast Vote
-│ └── Vote History
-└── Results
-└── Get Results
-
-## 17. API Contract Rule
-
-When a backend endpoint changes, update this documentation before frontend integration. If the actual response differs from this document, resolve the discrepancy between frontend and backend before changing frontend logic.

@@ -28,11 +28,10 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
-const emailRegex =
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const validateRegisterInput = (
-  data: Partial<RegisterInput>
+  data: Partial<RegisterInput>,
 ): string | null => {
   const { email, username, password } = data;
 
@@ -60,7 +59,7 @@ export const validateRegisterInput = (
 };
 
 export const validateVerifyEmailInput = (
-  data: Partial<VerifyEmailInput>
+  data: Partial<VerifyEmailInput>,
 ): string | null => {
   const { email, otp } = data;
 
@@ -76,7 +75,7 @@ export const validateVerifyEmailInput = (
 };
 
 export const validateLoginInput = (
-  data: Partial<LoginInput>
+  data: Partial<LoginInput>,
 ): string | null => {
   const { email, password } = data;
 
@@ -92,7 +91,7 @@ export const validateLoginInput = (
 };
 
 export const validateForgotPasswordInput = (
-  data: Partial<ForgotPasswordInput>
+  data: Partial<ForgotPasswordInput>,
 ): string | null => {
   if (!data.email || !emailRegex.test(data.email)) {
     return "Invalid email address";
@@ -102,7 +101,7 @@ export const validateForgotPasswordInput = (
 };
 
 export const validateVerifyResetOTPInput = (
-  data: Partial<VerifyResetOTPInput>
+  data: Partial<VerifyResetOTPInput>,
 ): string | null => {
   const { email, otp } = data;
 
@@ -118,7 +117,7 @@ export const validateVerifyResetOTPInput = (
 };
 
 export const validateResetPasswordInput = (
-  data: Partial<ResetPasswordInput>
+  data: Partial<ResetPasswordInput>,
 ): string | null => {
   const { resetToken, newPassword } = data;
 
