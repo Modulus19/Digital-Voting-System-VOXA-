@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { verifyEmail, resendVerification } from "../../services/authApi";
+import { forgotPassword, verifyResetOTP } from "../../services/authApi";
 import logo from "../../assets/images/logo.png";
 
-function Verification() {
+function VerifyResetOTP() {
   const location = useLocation();
   const navigate = useNavigate();
 
   const email = location.state?.email || "";
-  const [otp, setOtp] = useState("");
 
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,8 +21,8 @@ function Verification() {
     setError("");
     setMessage("");
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+    if (!email) {
+      setError("Email address is missing. Please request a new reset code.");
       return;
     }
 
@@ -34,20 +34,21 @@ function Verification() {
     try {
       setLoading(true);
 
-      await verifyEmail({
-        email: email.trim(),
+      const response = await verifyResetOTP({
+        email,
         otp: otp.trim(),
       });
 
-      navigate("/login", {
+      const resetToken = response.data.resetToken;
+
+      navigate("/reset-password", {
         state: {
-          message: "Email verified successfully. You can now log in.",
+          resetToken,
         },
       });
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Unable to verify your email. Please try again.",
+        err.response?.data?.message || "Invalid or expired verification code.",
       );
     } finally {
       setLoading(false);
@@ -58,22 +59,22 @@ function Verification() {
     setError("");
     setMessage("");
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+    if (!email) {
+      setError("Email address is missing. Please request a new reset code.");
       return;
     }
 
     try {
       setResending(true);
 
-      const response = await resendVerification({
-        email: email.trim(),
+      const response = await forgotPassword({
+        email,
       });
 
-      setMessage(response.message || "A new verification code has been sent.");
+      setMessage(response.message || "A new reset code has been sent.");
     } catch (err) {
       setError(
-        err.response?.data?.message || "Unable to resend verification code.",
+        err.response?.data?.message || "Unable to resend the reset code.",
       );
     } finally {
       setResending(false);
@@ -84,7 +85,7 @@ function Verification() {
     <div className="w-full max-w-[360px] mx-auto">
       {/* Logo */}
       <div className="flex justify-center mb-4">
-        <img src={logo} alt="VOXA" className="h-14 w-auto" />
+        <img src={logo} alt="VOXA" className="h-10 w-auto" />
       </div>
 
       {/* Heading */}
@@ -99,8 +100,7 @@ function Verification() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Verification code */}
-        <div className="mb-5">
+        <div className="mb-3">
           <label
             htmlFor="otp"
             className="block text-[13px] font-medium text-gray-700 mb-2"
@@ -120,7 +120,7 @@ function Verification() {
               setOtp(value);
             }}
             placeholder="Enter 6-digit code"
-            className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm tracking-[0.25em] outline-none focus:border-blue-500"
+            className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-[15px] tracking-[0.35em] outline-none focus:border-blue-500"
           />
         </div>
 
@@ -133,7 +133,7 @@ function Verification() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 py-3 text-[13px] font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+          className="mt-3 w-full rounded-md bg-blue-600 py-3 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? "Verifying..." : "Verify Code"}
         </button>
@@ -161,4 +161,4 @@ function Verification() {
   );
 }
 
-export default Verification;
+export default VerifyResetOTP;
