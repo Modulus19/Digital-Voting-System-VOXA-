@@ -20,6 +20,7 @@ import Register from '../pages/auth/Register'
 import ForgotPassword from '../pages/auth/ForgotPassword'
 import Verification from '../pages/auth/Verification'
 import ResetPassword from '../pages/auth/ResetPassword'
+import VerifyResetOTP from '../pages/auth/VerifyResetOTP'
 
 // User pages
 import Polls from '../pages/user/Polls'
@@ -54,6 +55,7 @@ function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verification" element={<Verification />} />
+        <Route path="/verify-reset-otp" element={<VerifyResetOTP />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
