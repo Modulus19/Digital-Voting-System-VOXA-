@@ -39,6 +39,19 @@ function Register() {
       setError("Please fill in all fields.");
       return;
     }
+    if (formData.username.trim().length > 30) {
+      setError("Username must be under 30 characters.");
+      return;
+    }
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (formData.password.length > 72) {
+      setError("Password must be under 72 characters.");
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");

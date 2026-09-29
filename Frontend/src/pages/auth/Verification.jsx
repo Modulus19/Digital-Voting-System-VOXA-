@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { verifyEmail, resendVerification } from "../../services/authApi";
 import logo from "../../assets/images/logo.png";
@@ -14,6 +14,16 @@ function Verification() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  useEffect(() => {
+    if (countdown <= 0) return;
+
+    const timer = setTimeout(() => {
+      setCountdown((previous) => previous - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -28,6 +38,10 @@ function Verification() {
 
     if (!otp.trim()) {
       setError("Please enter the verification code.");
+      return;
+    }
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setError("Verification code must be 6 digits.");
       return;
     }
 
@@ -71,6 +85,7 @@ function Verification() {
       });
 
       setMessage(response.message || "A new verification code has been sent.");
+      setCountdown(60);
     } catch (err) {
       setError(
         err.response?.data?.message || "Unable to resend verification code.",
@@ -144,10 +159,14 @@ function Verification() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resending}
+          disabled={resending || countdown > 0}
           className="font-medium text-blue-600 hover:underline disabled:opacity-60"
         >
-          {resending ? "Sending..." : "Resend"}
+          {resending
+            ? "Sending..."
+            : countdown > 0
+              ? `Resend in ${countdown}s`
+              : "Resend"}
         </button>
       </p>
 

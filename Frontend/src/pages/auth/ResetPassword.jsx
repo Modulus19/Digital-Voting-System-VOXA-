@@ -30,6 +30,15 @@ function ResetPassword() {
       setError("Please fill in both password fields.");
       return;
     }
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword.length > 72) {
+      setError("New password must be under 72 characters.");
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match.");
