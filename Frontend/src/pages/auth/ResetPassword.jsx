@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { resetPassword } from "../../services/authApi";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/voxa-logo.png";
 
 function ResetPassword() {
   const location = useLocation();

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login as loginRequest } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/voxa-logo.png";
 
 function Login() {
   const navigate = useNavigate();

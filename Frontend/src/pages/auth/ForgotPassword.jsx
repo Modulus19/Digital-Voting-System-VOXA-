@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { forgotPassword } from "../../services/authApi";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/voxa-logo.png";
 
 function ForgotPassword() {
   const navigate = useNavigate();

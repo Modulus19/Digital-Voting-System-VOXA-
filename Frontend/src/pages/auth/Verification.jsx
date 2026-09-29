@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { verifyEmail, resendVerification } from "../../services/authApi";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/voxa-logo.png";
 
 function Verification() {
   const location = useLocation();
