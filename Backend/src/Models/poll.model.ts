@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 
 export type PollStatus = 'draft' | 'published' | 'closed';
 export type ResultsVisibility = 'after_vote' | 'after_close' | 'admin_only';
-
+export type PollCategory = 'education' | 'technology' | 'sports' | 'lifestyle' | 'food' | 'others';
 export interface IPollOption {
   text: string;
 }
@@ -12,6 +12,8 @@ export interface IPoll extends Document {
   options: IPollOption[];
   status: PollStatus;
   resultsVisibility: ResultsVisibility;
+  category: PollCategory;
+  closesAt: Date;
   creator: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -62,6 +64,15 @@ const pollSchema = new Schema<IPoll>(
       enum: ['after_vote', 'after_close', 'admin_only'],
       required: true,
     },
+    category: {
+     type: String,
+     enum: ['education', 'technology', 'sports', 'lifestyle', 'food', 'others'],
+      required:true,
+    },
+    closesAt: {
+     type: Date,
+     required:true,
+   },
     creator: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -83,3 +94,4 @@ const pollSchema = new Schema<IPoll>(
 );
 
 export default model<IPoll>('Poll', pollSchema);
+export const VALID_CATEGORIES: PollCategory[] = ['education', 'technology', 'sports', 'lifestyle', 'food', 'others'];
