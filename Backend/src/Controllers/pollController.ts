@@ -1,4 +1,5 @@
 import { Response, Request } from 'express';
+import { PollCategory, VALID_CATEGORIES } from '../Models/poll.model.js';
 import { sendSuccess, sendError } from '../Utils/responses.js';
 import {
   createPollService,
@@ -18,12 +19,14 @@ import {
 
 export const createPoll = async (req: Request, res: Response) => {
   try {
-    const { question, options, resultsVisibility } = req.body;
+   const { question, options, resultsVisibility, category, closesAt } = req.body;
 
     const poll = await createPollService({
       question,
       options,
       resultsVisibility,
+      category,
+      closesAt,
       creator: req.user!.id,
     });
 
@@ -39,12 +42,29 @@ export const getPolls = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const isAdmin = req.user?.role === 'admin';
+    const search = req.query.search as string | undefined;
+    const category = req.query.category as string | undefined;
+    const sort = req.query.sort as string | undefined;
+
+    
+    if (category && !(VALID_CATEGORIES as readonly string[]).includes(category)) {
+      return sendError(res, `category must be one of: ${VALID_CATEGORIES.join(', ')}.`, 400);
+    }
+
+    const VALID_SORTS = ['recent', 'trending', 'ending_soon'];
+    if (sort && !VALID_SORTS.includes(sort)) {
+      return sendError(res, `sort must be one of: ${VALID_SORTS.join(', ')}.`, 400);
+    }
+
 
     const result = await getPollsService({
       page,
       limit,
       requesterId: req.user!.id,
       isAdmin,
+      search,
+      category: category as PollCategory | undefined,
+      sort: sort as 'recent' | 'trending' | 'ending_soon' | undefined,
     });
 
     return sendSuccess(res, result);
