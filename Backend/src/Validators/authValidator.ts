@@ -1,4 +1,5 @@
 export interface RegisterInput {
+  username: string;
   email: string;
   password: string;
 }
@@ -30,16 +31,46 @@ export interface ResetPasswordInput {
 const emailRegex =
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const usernameRegex =
+  /^[a-zA-Z0-9_]+$/;
+
 export const validateRegisterInput = (
   data: Partial<RegisterInput>
 ): string | null => {
-  const { email, password } = data;
+  const {
+    username,
+    email,
+    password,
+  } = data;
 
-  if (!email || !emailRegex.test(email)) {
+  if (!username || username.trim().length === 0) {
+    return "Username is required";
+  }
+
+  const cleanUsername = username.trim();
+
+  if (
+    cleanUsername.length < 3 ||
+    cleanUsername.length > 30
+  ) {
+    return "Username must be between 3 and 30 characters";
+  }
+
+  if (!usernameRegex.test(cleanUsername)) {
+    return "Username can only contain letters, numbers, and underscores";
+  }
+
+  if (
+    !email ||
+    !emailRegex.test(email)
+  ) {
     return "Invalid email address";
   }
 
-  if (!password || password.length < 8) {
+  if (
+    !password ||
+    password.length < 8
+  ) {
     return "Password must be at least 8 characters";
   }
 
@@ -53,13 +84,22 @@ export const validateRegisterInput = (
 export const validateVerifyEmailInput = (
   data: Partial<VerifyEmailInput>
 ): string | null => {
-  const { email, otp } = data;
+  const {
+    email,
+    otp,
+  } = data;
 
-  if (!email || !emailRegex.test(email)) {
+  if (
+    !email ||
+    !emailRegex.test(email)
+  ) {
     return "Invalid email address";
   }
 
-  if (!otp || !/^\d{6}$/.test(otp)) {
+  if (
+    !otp ||
+    !/^\d{6}$/.test(otp)
+  ) {
     return "Verification code must be 6 digits";
   }
 
@@ -69,9 +109,15 @@ export const validateVerifyEmailInput = (
 export const validateLoginInput = (
   data: Partial<LoginInput>
 ): string | null => {
-  const { email, password } = data;
+  const {
+    email,
+    password,
+  } = data;
 
-  if (!email || !emailRegex.test(email)) {
+  if (
+    !email ||
+    !emailRegex.test(email)
+  ) {
     return "Invalid email address";
   }
 
@@ -85,7 +131,10 @@ export const validateLoginInput = (
 export const validateForgotPasswordInput = (
   data: Partial<ForgotPasswordInput>
 ): string | null => {
-  if (!data.email || !emailRegex.test(data.email)) {
+  if (
+    !data.email ||
+    !emailRegex.test(data.email)
+  ) {
     return "Invalid email address";
   }
 
@@ -95,13 +144,22 @@ export const validateForgotPasswordInput = (
 export const validateVerifyResetOTPInput = (
   data: Partial<VerifyResetOTPInput>
 ): string | null => {
-  const { email, otp } = data;
+  const {
+    email,
+    otp,
+  } = data;
 
-  if (!email || !emailRegex.test(email)) {
+  if (
+    !email ||
+    !emailRegex.test(email)
+  ) {
     return "Invalid email address";
   }
 
-  if (!otp || !/^\d{6}$/.test(otp)) {
+  if (
+    !otp ||
+    !/^\d{6}$/.test(otp)
+  ) {
     return "Reset code must be 6 digits";
   }
 
@@ -111,13 +169,19 @@ export const validateVerifyResetOTPInput = (
 export const validateResetPasswordInput = (
   data: Partial<ResetPasswordInput>
 ): string | null => {
-  const { resetToken, newPassword } = data;
+  const {
+    resetToken,
+    newPassword,
+  } = data;
 
   if (!resetToken) {
     return "Reset token is required";
   }
 
-  if (!newPassword || newPassword.length < 8) {
+  if (
+    !newPassword ||
+    newPassword.length < 8
+  ) {
     return "New password must be at least 8 characters";
   }
 

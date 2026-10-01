@@ -1,32 +1,57 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 import User from "../Models/user.model.js";
+
 import type {
   LoginInput,
   RegisterInput,
 } from "../Validators/authValidator.js";
+
 import type {
   PasswordResetTokenPayload,
 } from "../Types/auth.types.js";
-import { createAndSendVerificationOTP } from "./otpService.js";
-import { generateAccessToken } from "../Utils/generateToken.js";
+
+import {
+  createAndSendVerificationOTP,
+} from "./otpService.js";
+
+import {
+  generateAccessToken,
+} from "../Utils/generateToken.js";
 
 export const registerUser = async (
   data: RegisterInput
 ) => {
+  const username =
+    data.username.trim().toLowerCase();
+
   const email =
     data.email.trim().toLowerCase();
 
-  const { password } = data;
+  const {
+    password,
+  } = data;
 
-  const existingUser =
+  const existingEmail =
     await User.findOne({
       email,
     });
 
-  if (existingUser) {
+  if (existingEmail) {
     throw new Error(
       "An account with this email already exists"
+    );
+  }
+
+  const existingUsername =
+    await User.findOne({
+      username,
+    });
+
+  if (existingUsername) {
+    throw new Error(
+      "This username is already taken"
     );
   }
 
@@ -36,12 +61,14 @@ export const registerUser = async (
       12
     );
 
-  const user = await User.create({
-    email,
-    passwordHash,
-    role: "user",
-    emailVerified: false,
-  });
+  const user =
+    await User.create({
+      username,
+      email,
+      passwordHash,
+      role: "user",
+      emailVerified: false,
+    });
 
   try {
     await createAndSendVerificationOTP(
@@ -58,6 +85,7 @@ export const registerUser = async (
 
   return {
     id: user._id.toString(),
+    username: user.username,
     email: user.email,
     role: user.role,
     emailVerified:
@@ -71,11 +99,14 @@ export const loginUser = async (
   const email =
     data.email.trim().toLowerCase();
 
-  const { password } = data;
+  const {
+    password,
+  } = data;
 
-  const user = await User.findOne({
-    email,
-  });
+  const user =
+    await User.findOne({
+      email,
+    });
 
   if (!user) {
     throw new Error(
@@ -111,6 +142,7 @@ export const loginUser = async (
   return {
     user: {
       id: user._id.toString(),
+      username: user.username,
       email: user.email,
       role: user.role,
       emailVerified:
@@ -139,10 +171,11 @@ export const resetUserPassword =
       | undefined;
 
     try {
-      decoded = jwt.verify(
-        resetToken,
-        jwtSecret
-      ) as PasswordResetTokenPayload;
+      decoded =
+        jwt.verify(
+          resetToken,
+          jwtSecret
+        ) as PasswordResetTokenPayload;
     } catch {
       throw new Error(
         "Invalid or expired reset token"
@@ -182,6 +215,7 @@ export const resetUserPassword =
 
     return {
       id: user._id.toString(),
+      username: user.username,
       email: user.email,
     };
   };

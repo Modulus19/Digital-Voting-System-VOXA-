@@ -2,18 +2,22 @@ import type {
   Request,
   Response,
 } from "express";
+
 import User from "../Models/user.model.js";
+
 import {
   loginUser,
   registerUser,
   resetUserPassword,
 } from "../Services/authService.js";
+
 import {
   createAndSendPasswordResetOTP,
   createAndSendVerificationOTP,
   verifyEmailOTP,
   verifyPasswordResetOTP,
 } from "../Services/otpService.js";
+
 import {
   validateForgotPasswordInput,
   validateLoginInput,
@@ -39,12 +43,15 @@ export const register = async (
         validationError,
       data: null,
     });
+
     return;
   }
 
   try {
     const user =
       await registerUser({
+        username:
+          req.body.username,
         email:
           req.body.email,
         password:
@@ -61,17 +68,23 @@ export const register = async (
     });
   } catch (error) {
     if (
-      error instanceof Error &&
-      error.message ===
-        "An account with this email already exists"
+      error instanceof Error
     ) {
-      res.status(409).json({
-        success: false,
-        message:
-          error.message,
-        data: null,
-      });
-      return;
+      if (
+        error.message ===
+          "An account with this email already exists" ||
+        error.message ===
+          "This username is already taken"
+      ) {
+        res.status(409).json({
+          success: false,
+          message:
+            error.message,
+          data: null,
+        });
+
+        return;
+      }
     }
 
     console.error(error);
@@ -102,6 +115,7 @@ export const verifyEmail =
           validationError,
         data: null,
       });
+
       return;
     }
 
@@ -143,6 +157,7 @@ export const verifyEmail =
               error.message,
             data: null,
           });
+
           return;
         }
       }
@@ -183,6 +198,7 @@ export const resendVerification =
           "Invalid email address",
         data: null,
       });
+
       return;
     }
 
@@ -199,6 +215,7 @@ export const resendVerification =
             "If the account exists and requires verification, a verification code will be sent",
           data: null,
         });
+
         return;
       }
 
@@ -211,6 +228,7 @@ export const resendVerification =
             "Email is already verified",
           data: null,
         });
+
         return;
       }
 
@@ -238,6 +256,7 @@ export const resendVerification =
             error.message,
           data: null,
         });
+
         return;
       }
 
@@ -268,6 +287,7 @@ export const login = async (
         validationError,
       data: null,
     });
+
     return;
   }
 
@@ -300,6 +320,7 @@ export const login = async (
             error.message,
           data: null,
         });
+
         return;
       }
 
@@ -313,6 +334,7 @@ export const login = async (
             error.message,
           data: null,
         });
+
         return;
       }
     }
@@ -345,6 +367,7 @@ export const forgotPassword =
           validationError,
         data: null,
       });
+
       return;
     }
 
@@ -385,6 +408,7 @@ export const forgotPassword =
             error.message,
           data: null,
         });
+
         return;
       }
 
@@ -416,6 +440,7 @@ export const verifyResetOTP =
           validationError,
         data: null,
       });
+
       return;
     }
 
@@ -454,6 +479,7 @@ export const verifyResetOTP =
               error.message,
             data: null,
           });
+
           return;
         }
       }
@@ -486,6 +512,7 @@ export const resetPassword =
           validationError,
         data: null,
       });
+
       return;
     }
 
@@ -518,6 +545,7 @@ export const resetPassword =
             error.message,
           data: null,
         });
+
         return;
       }
 
