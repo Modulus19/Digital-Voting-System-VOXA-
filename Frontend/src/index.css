@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-primary: #3B82F6;      /* Main brand blue — active states, primary buttons */
+  --color-secondary: #8B5CF6;    /* Brand purple — secondary accents, avatars */
+  --color-accent: #EC4899;       /* Brand pink — highlights, badges, special CTAs */
+
+  /* Neutrals / surfaces */
+  --color-ink: #0F172A;          /* Dark navy — footer bg, high-contrast dark sections */
+  --color-surface: #F8F8FC;      /* Page background */
+  --color-surface-alt: #FDFDFD;  /* Card/element background sitting on the page */
+  --color-border: #E5E7EB;       /* Borders, dividers on light backgrounds */
+
+  /* Text */
+  --color-text-heading: #0F172A; /* Headings on light backgrounds */
+  --color-text-muted: #64748B;   /* Secondary/inactive text on light backgrounds */
+  --color-text-subtle: #94A3B8;  /* Muted text on dark backgrounds (footer links) */
+  --color-text-inverse: #FFFFFF; /* Text on dark or colored backgrounds */
+}

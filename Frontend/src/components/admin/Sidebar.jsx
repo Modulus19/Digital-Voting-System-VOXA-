@@ -6,7 +6,7 @@ export default function Sidebar({ links }) {
       <div className="text-xs text-slate-400 mb-8">Admin</div>
       <nav className="flex flex-col gap-1">
         {links.map((link) => (
-          
+          <a
             key={link.path}
             href={link.path}
             className="px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-500 hover:bg-gray-50"
