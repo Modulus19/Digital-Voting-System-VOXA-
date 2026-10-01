@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
-import api from "../services/api";
+import { getCurrentUser } from "../services/authApi";
 
 const AuthContext = createContext();
 
@@ -9,24 +9,28 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
+
     if (!token) {
       setLoading(false);
       return;
     }
-    api.get("/auth/me")
-      .then((res) => setUser(res.data.data))
-      .catch(() => localStorage.removeItem("token"))
+
+    getCurrentUser()
+      .then((res) => setUser(res.data))
+      .catch(() => {
+        localStorage.removeItem("accessToken");
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem("token", token);
+    localStorage.setItem("accessToken", token);
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("accessToken");
     setUser(null);
   };
 
