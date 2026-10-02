@@ -1,15 +1,10 @@
-
 import { Icon } from "@iconify/react";
-import { CATEGORY_ICONS } from "./PollCard";
 
-const CATEGORIES = [
-  "Education",
-  "Technology",
-  "Sports",
-  "Lifestyle",
-  "Food",
-  "Others",
-];
+import {
+  CATEGORIES,
+  CATEGORY_ICONS,
+} from "../../utils/pollConstants";
+
 
 export default function CategorySidebar({
   selectedCategory,
@@ -24,26 +19,29 @@ export default function CategorySidebar({
       <div className="flex flex-col gap-1">
         {CATEGORIES.map((category) => (
           <button
-            key={category}
+            key={category.value}
             type="button"
             onClick={() =>
               onCategoryChange(
-                selectedCategory === category ? null : category
+                selectedCategory === category.value
+                  ? null
+                  : category.value
               )
             }
-            aria-pressed={selectedCategory === category}
+            aria-pressed={selectedCategory === category.value}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-              selectedCategory === category
+              selectedCategory === category.value
                 ? "bg-blue-50 text-primary"
                 : "text-text-heading hover:bg-surface"
             }`}
           >
             <Icon
-              icon={CATEGORY_ICONS[category]}
+              icon={CATEGORY_ICONS[category.value]}
               width={22}
               height={22}
             />
-            {category}
+
+            {category.label}
           </button>
         ))}
       </div>

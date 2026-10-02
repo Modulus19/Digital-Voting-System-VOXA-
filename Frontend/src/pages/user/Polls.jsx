@@ -1,132 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
+
 import SearchBar from "../../components/common/SearchBar";
 import PollList from "../../components/polls/PollList";
 import CategorySidebar from "../../components/polls/CategorySidebar";
-import { useNavigate } from "react-router-dom";
 
 const FILTERS = ["All", "Trending", "Recents", "Ending soon"];
 const POLLS_PER_PAGE = 5;
 
-const now = Date.now();
-
-const minutesFromNow = (minutes) =>
-  new Date(now + minutes * 60 * 1000).toISOString();
-
-const hoursAgo = (hours) =>
-  new Date(now - hours * 60 * 60 * 1000).toISOString();
-
-
-// TEMP mock data — remove once GET /api/polls is wired up
-const MOCK_POLLS = [
-  {
-    id: "1",
-    category: "Others",
-    title: "What's the best way to spend a Friday?",
-    options: [
-      { id: "a", label: "Go clubbing" },
-      { id: "b", label: "Netflix and chill" },
-      { id: "c", label: "Sleep throughout" },
-    ],
-    endsInLabel: "Ends in 3 hours",
-    votesCount: 1200,
-    trending: false,
-    createdAt: hoursAgo(5),
-    endsAt: minutesFromNow(180),
-  },
-
-  {
-    id: "2",
-    category: "Food",
-    title: "Rice or Beans?",
-    options: [
-      { id: "a", label: "Rice" },
-      { id: "b", label: "Beans" },
-      { id: "c", label: "I rather eat swallow" },
-    ],
-    endsInLabel: "Ends in 30 minutes",
-    votesCount: 500,
-    trending: true,
-    createdAt: hoursAgo(2),
-    endsAt: minutesFromNow(30),
-  },
-
-  {
-    id: "3",
-    category: "Education",
-    title: "Should 8a.m classes be banned?",
-    options: [
-      { id: "a", label: "Yes" },
-      { id: "b", label: "No" },
-      { id: "c", label: "Move to 9a.m" },
-    ],
-    endsInLabel: "Ends in 1 hour",
-    votesCount: 1000,
-    trending: true,
-    createdAt: hoursAgo(1),
-    endsAt: minutesFromNow(60),
-  },
-
-  {
-    id: "4",
-    category: "Technology",
-    title: "Which device do you use most for studying?",
-    options: [
-      { id: "a", label: "Laptop" },
-      { id: "b", label: "Smartphone" },
-      { id: "c", label: "Tablet" },
-    ],
-    endsInLabel: "Ends in 2 days",
-    createdAt: hoursAgo(3),
-    endsAt: minutesFromNow(2880),
-    votesCount: 850,
-    trending: false,
-  },
-
-  {
-    id: "5",
-    category: "Sports",
-    title: "What's your favourite sport?",
-    options: [
-      { id: "a", label: "Football" },
-      { id: "b", label: "Basketball" },
-      { id: "c", label: "Tennis" },
-    ],
-    endsInLabel: "Ends in 6 hours",
-    createdAt: hoursAgo(0.5),
-    endsAt: minutesFromNow(360),
-    votesCount: 2100,
-    trending: true,
-  },
-
-  {
-    id: "6",
-    category: "Lifestyle",
-    title: "How do you prefer to spend your weekends?",
-    options: [
-      { id: "a", label: "Going out with friends" },
-      { id: "b", label: "Staying at home" },
-      { id: "c", label: "Learning something new" },
-    ],
-    endsInLabel: "Ends in 12 hours",
-    createdAt: hoursAgo(8),
-    endsAt: minutesFromNow(720),
-    votesCount: 430,
-    trending: false,
-  },
-
-];
-
-
-// TEMP: simulates a real API call — swap this out for
-// `api.get('/polls')` from src/services/api.js once ready.
-function fetchPollsMock() {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(MOCK_POLLS), 800);
-  });
-}
 
 export default function Polls() {
+  const navigate = useNavigate();
+
   const [polls, setPolls] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -138,24 +24,47 @@ export default function Polls() {
   const [retryCount, setRetryCount] = useState(0);
 
   const dropdownRef = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchPollsMock()
-      .then((data) => {
-        if (!cancelled) {
-          setPolls(data);
-          setError(null);
+    const fetchPolls = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem("accessToken");
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/polls`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to load polls.");
         }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load polls.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+
+        if (!cancelled) {
+          setPolls(data.data.polls);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setError(error.message || "Failed to load polls.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPolls();
 
     return () => {
       cancelled = true;
@@ -176,12 +85,19 @@ export default function Polls() {
 
   const filteredPolls = polls
     .filter((poll) => {
-      const matchesSearch = poll.title
-        .toLowerCase()
-        .includes(searchTerm.trim().toLowerCase());
+      const search = searchTerm.trim().toLowerCase();
+
+      const matchesSearch =
+        poll.question.toLowerCase().includes(search) ||
+        poll.category.toLowerCase().includes(search) ||
+        // poll.description.toLowerCase().includes(search) ||
+        poll.options.some((option) =>
+          option.text.toLowerCase().includes(search)
+        );
 
       const matchesCategory =
-        !selectedCategory || poll.category === selectedCategory;
+        !selectedCategory ||
+        poll.category === selectedCategory.toLowerCase();
 
       return matchesSearch && matchesCategory;
     })
@@ -194,7 +110,7 @@ export default function Polls() {
       }
 
       if (activeFilter === "Ending soon") {
-        return new Date(a.endsAt) - new Date(b.endsAt);
+        return new Date(a.closesAt) - new Date(b.closesAt);
       }
 
       return 0;
@@ -224,26 +140,35 @@ export default function Polls() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-heading">
-            Polls
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Discover polls, share your opinion and see what people think.
-          </p>
+
+      {/* Header — follows the same columns as the main content */}
+      <div className="mb-6 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_250px]">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-text-heading">
+              Polls
+            </h1>
+
+            <p className="mt-1 text-sm text-slate-600">
+              Discover polls, share your opinion and see what people think.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Create a poll"
+            onClick={() => navigate("/polls/create")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300"
+          >
+            <Icon icon="mdi:plus" width={24} />
+          </button>
         </div>
 
-        <button
-          type="button"
-          aria-label="Create a poll"
-          onClick={() => navigate("/polls/create")}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300"
-        >
-          <Icon icon="mdi:plus" width={24} />
-        </button>
+        {/* Keeps header aligned with the category column */}
+        <div className="hidden lg:block" />
       </div>
 
+      {/* Main content */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_250px]">
         <section className="min-w-0">
           <SearchBar
@@ -264,11 +189,14 @@ export default function Polls() {
               aria-haspopup="true"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setDropdownOpen(false);
+                if (event.key === "Escape") {
+                  setDropdownOpen(false);
+                }
               }}
               className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
             >
               {activeFilter}
+
               <Icon
                 icon={
                   dropdownOpen
@@ -316,7 +244,9 @@ export default function Polls() {
               <button
                 type="button"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage((page) => page - 1)}
+                onClick={() =>
+                  setCurrentPage((page) => page - 1)
+                }
                 className="rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-40"
               >
                 Previous
@@ -329,7 +259,9 @@ export default function Polls() {
               <button
                 type="button"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((page) => page + 1)}
+                onClick={() =>
+                  setCurrentPage((page) => page + 1)
+                }
                 className="rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-40"
               >
                 Next
@@ -338,6 +270,7 @@ export default function Polls() {
           )}
         </section>
 
+        {/* Category column remains in the same position */}
         <div className="lg:pt-20">
           <CategorySidebar
             selectedCategory={selectedCategory}
