@@ -85,7 +85,7 @@ function ForgotPassword() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-text-inverse transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Sending..." : "Send Code"}
         </button>
@@ -94,7 +94,7 @@ function ForgotPassword() {
           Remember your password?{" "}
           <Link
             to="/login"
-            className="font-medium text-blue-600 hover:underline"
+            className="font-medium text-primary hover:underline"
           >
             Log in
           </Link>
