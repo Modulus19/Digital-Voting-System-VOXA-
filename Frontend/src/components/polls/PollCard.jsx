@@ -96,7 +96,7 @@ export default function PollCard({ poll }) {
         </div>
 
         <p className="mt-3 text-xs text-slate-500">
-          {poll.votesCount.toLocaleString()} votes
+          {(poll.votesCount ?? 0).toLocaleString()} votes
         </p>
       </div>
     </article>
