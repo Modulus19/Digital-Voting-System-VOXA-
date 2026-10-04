@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 
 import SearchBar from "../../components/common/SearchBar";
+import FilterPills from "../../components/common/FilterPills";
 import PollList from "../../components/polls/PollList";
 import CategorySidebar from "../../components/polls/CategorySidebar";
 
-const FILTERS = ["All", "Trending", "Recents", "Ending soon"];
+const FILTERS = ["All", "Trending", "Recents", "Ending Soon"];
 const POLLS_PER_PAGE = 5;
 
 
@@ -18,12 +19,9 @@ export default function Polls() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-
-  const dropdownRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,18 +69,6 @@ export default function Polls() {
     };
   }, [retryCount]);
 
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (!dropdownRef.current?.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handleOutsideClick);
-    return () =>
-      document.removeEventListener("pointerdown", handleOutsideClick);
-  }, []);
-
   const filteredPolls = polls
     .filter((poll) => {
       const search = searchTerm.trim().toLowerCase();
@@ -109,7 +95,7 @@ export default function Polls() {
         return new Date(b.createdAt) - new Date(a.createdAt);
       }
 
-      if (activeFilter === "Ending soon") {
+      if (activeFilter === "Ending Soon") {
         return new Date(a.closesAt) - new Date(b.closesAt);
       }
 
@@ -129,7 +115,6 @@ export default function Polls() {
   function changeFilter(filter) {
     setActiveFilter(filter);
     setCurrentPage(1);
-    setDropdownOpen(false);
   }
 
   function retry() {
@@ -182,49 +167,12 @@ export default function Polls() {
             placeholder="Search polls..."
           />
 
-          <div className="relative my-5" ref={dropdownRef}>
-            <button
-              type="button"
-              aria-expanded={dropdownOpen}
-              aria-haspopup="true"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setDropdownOpen(false);
-                }
-              }}
-              className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
-            >
-              {activeFilter}
-
-              <Icon
-                icon={
-                  dropdownOpen
-                    ? "mdi:chevron-up"
-                    : "mdi:chevron-down"
-                }
-                width={18}
-              />
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute left-0 top-full z-20 mt-2 w-44 rounded-xl border border-border bg-white p-1 shadow-lg">
-                {FILTERS.map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => changeFilter(filter)}
-                    className={`block w-full rounded-lg px-4 py-2 text-left text-sm hover:bg-surface ${
-                      activeFilter === filter
-                        ? "font-semibold text-primary"
-                        : "text-text-heading"
-                    }`}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="my-5">
+            <FilterPills
+              filters={FILTERS}
+              activeFilter={activeFilter}
+              onFilterChange={changeFilter}
+            />
           </div>
 
           <PollList
