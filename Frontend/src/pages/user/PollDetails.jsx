@@ -1,233 +1,240 @@
-import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Icon } from "@iconify/react";
 
 import Error from "../../components/common/Error";
-import { MOCK_POLLS } from "../../data/mockPolls";
-import { CATEGORY_ICONS } from "../../utils/pollConstants";
-import { getTimeRemaining } from "../../utils/pollHelpers";
+import Loading from "../../components/common/Loading";
+import VotingSection from "../../components/voting/VotingSection";
 
+import api from "../../services/api";
+
+import {
+  CATEGORY_ICONS,
+} from "../../utils/pollConstants";
+
+import {
+  getTimeRemaining,
+} from "../../utils/pollHelpers";
 
 export default function PollDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [poll, setPoll] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  /**
+   * Load the poll from the backend.
+   */
+  const loadPoll = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await api.get(
+        `/polls/${id}`
+      );
+
+      setPoll(response.data.data);
+    } catch (error) {
+      console.error(
+        "Load poll details error:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load this poll."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPoll = async () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/polls/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        console.log("POLL RESPONSE:", data);
-      } catch (error) {
-        console.error("FAILED TO FETCH POLL:", error);
-      }
-    };
-
-    fetchPoll();
+    loadPoll();
   }, [id]);
-  
-  // TEMP:
-  // Later replace MOCK_POLL with GET /api/polls/:id
-  const poll = MOCK_POLLS.find((poll) => poll.id === id);
-  
-  const timeRemaining = poll
-    ? getTimeRemaining(poll.closesAt, poll.status)
-    : "";
-    
-  function handleShare() {
-    if (navigator.share) {
-      navigator.share({
-        title: poll.question,
-        text: poll.description,
-        url: window.location.href,
-      });
-      return;
-    }
 
-    navigator.clipboard.writeText(window.location.href);
+  if (loading) {
+    return <Loading />;
   }
 
+  if (error) {
+    return (
+      <Error
+        message={error}
+        onRetry={loadPoll}
+      />
+    );
+  }
+
+  if (!poll) {
+    return (
+      <Error message="Poll not found." />
+    );
+  }
+
+  const timeRemaining = getTimeRemaining(
+    poll.closesAt,
+    poll.status
+  );
+
+  const creatorName =
+    poll?.creator?.name ||
+    poll?.creator?.username ||
+    "Poll creator";
+
+  const creatorInitials =
+    poll?.creator?.initials ||
+    creatorName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      {/* Back To Poll Link*/}
-      <Link
-        to="/polls"
-        className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* Back */}
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="mb-5 flex items-center gap-2 text-sm font-medium text-text-muted transition hover:text-text-heading"
       >
-        <Icon icon="mdi:arrow-left" width={15} />
-        Back to Polls
-      </Link>
+        <Icon
+          icon="mdi:arrow-left"
+          width={20}
+        />
 
-      {!poll ? (
-        <Error message="Poll not found." />
-      ):(
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-          {/* LEFT */}
-          <main className="flex min-w-0 flex-col gap-7">
-            {/* Poll card */}
-            <section className="rounded-2xl border border-border bg-white p-6">
-              <div className="flex gap-4">
-                {/* Category icon */}
-                <div className="flex h-10 w-10 shrink-0 items-start justify-center">
-                  <Icon
-                    icon={CATEGORY_ICONS[poll.category] || CATEGORY_ICONS.others}
-                    width={28}
-                    height={28}
-                  />
-                </div>
+        Back
+      </button>
 
-                <div className="min-w-0 flex-1">
-                  {/* Heading */}
-                  <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                    <div>
-                      <h1 className="text-base font-bold text-text-heading">
-                        {poll.question}
-                      </h1>
-
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                        <span className="inline-flex items-center gap-1">
-                          <Icon
-                            icon={CATEGORY_ICONS[poll.category] || CATEGORY_ICONS.others}
-                            width={14}
-                          />
-                          <span className="capitalize">{poll.category}</span>
-                        </span>
-
-                        <span>•</span>
-
-                        <span className="inline-flex items-center gap-1">
-                          <Icon icon="mdi:account-group" width={14} />
-                          {poll.votesCount.toLocaleString()} votes
-                        </span>
-                      </div>
-                    </div>
-
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-text-muted">
-                      <Icon icon="mdi:clock-outline" width={15} />
-                      {timeRemaining}
-                    </span>
-                  </div>
-
-                  {/* Voting & Results UI — Member 6 integration point */}
-                  <div className="mt-5">
-                    <div className="rounded-xl border border-dashed border-border bg-surface p-5 text-center">
-                      <p className="text-sm text-text-muted">
-                        Voting interface will appear here.
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-4 text-xs text-text-muted">
-                    Created on {
-                        new Date(poll.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    }
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* About */}
-            <section className="rounded-2xl border border-border bg-white p-6">
-              <div className="px-2 sm:px-8">
-                <h2 className="text-sm font-bold text-text-heading">
-                  About this poll
-                </h2>
-
-                <p className="mt-3 max-w-2xl text-sm font-normal leading-relaxed text-text-heading">
-                  {poll.description}
-                </p>
-              </div>
-
-              <div className="my-5 border-t border-border" />
-
-              <div className="flex items-center gap-3 px-2 sm:px-8">
-                <span className="text-sm font-medium text-text-heading">
-                  Created by
-                </span>
-
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-white">
-                  {poll.creator.initials}
-                </div>
-
-                <span className="text-sm text-text-muted">
-                  {poll.creator.name}
-                </span>
-              </div>
-            </section>
-          </main>
-
-          {/* RIGHT SIDEBAR */}
-          <aside className="rounded-2xl border border-border bg-white p-6">
-            <h2 className="text-lg font-bold text-text-heading">
-              Poll Information
-            </h2>
-
-            <div className="mt-5 flex flex-col gap-6 text-sm">
-              <div className="flex gap-3">
-                <span>•</span>
-                <div>
-                  <p className="font-semibold text-text-heading">
-                    {poll.votesCount.toLocaleString()} Total Votes
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <span>•</span>
-                <p className="font-semibold text-text-heading">
-                  {timeRemaining}
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <span>•</span>
-                <p className="font-semibold text-text-heading">
-                  Created by {poll.creator.name}
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <span>•</span>
-                <p className="font-semibold text-text-heading">
-                  Created on {
-                    new Date(poll.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        {/* Main poll */}
+        <main className="min-w-0">
+          <article className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+            {/* Question */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+                <Icon
+                  icon={
+                    CATEGORY_ICONS[
+                      poll.category
+                    ] ||
+                    CATEGORY_ICONS.others
                   }
-                </p>
+                  width={28}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold leading-snug text-text-heading sm:text-2xl">
+                  {poll.question}
+                </h1>
+
+                {/* Metadata */}
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
+                  <span className="capitalize">
+                    {poll.category}
+                  </span>
+
+                  <span aria-hidden="true">
+                    •
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <Icon
+                      icon="mdi:clock-outline"
+                      width={15}
+                    />
+
+                    {timeRemaining}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="my-6 border-t border-border" />
+            {/* Voting */}
+            <VotingSection
+              pollId={poll.id}
+              options={poll.options}
+              status={poll.status}
+              resultsVisibility={
+                poll.resultsVisibility
+              }
+              onVoteSubmitted={loadPoll}
+            />
+
+            {/* About */}
+            <div className="mt-7 border-t border-border pt-6">
+              <h2 className="text-sm font-semibold text-text-heading">
+                About this poll
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                {poll.description ||
+                  "No description was provided for this poll."}
+              </p>
+            </div>
+          </article>
+        </main>
+
+        {/* Sidebar */}
+        <aside className="space-y-4">
+          {/* Creator */}
+          <div className="rounded-2xl border border-border bg-white p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Created by
+            </p>
+
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-sm font-semibold text-text-heading">
+                {creatorInitials}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-text-heading">
+                  {creatorName}
+                </p>
+
+                <p className="text-xs text-text-muted">
+                  Poll creator
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Share */}
+          <div className="rounded-2xl border border-border bg-white p-5">
+            <h2 className="text-sm font-semibold text-text-heading">
+              Share this poll
+            </h2>
+
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Invite others to participate in
+              this poll.
+            </p>
 
             <button
               type="button"
-              onClick={handleShare}
-              className="flex w-full items-center justify-between rounded-lg bg-primary px-4 py-3 text-xs font-medium text-white transition hover:opacity-90"
+              onClick={() => {
+                navigator.clipboard?.writeText(
+                  window.location.href
+                );
+              }}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-heading transition hover:bg-surface"
             >
-              Share Poll
+              <Icon
+                icon="mdi:link-variant"
+                width={18}
+              />
 
-              <Icon icon="mdi:chevron-right" width={18} />
+              Copy link
             </button>
-          </aside>
-        </div>
-      )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
