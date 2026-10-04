@@ -66,26 +66,39 @@ export default function CreatePoll() {
   };
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+      {/* Back */}
       <button
         type="button"
         onClick={() => navigate("/polls")}
-        className="mb-5 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+        className="
+          mb-4 flex items-center gap-1.5
+          text-sm font-medium text-blue-600
+          transition-all duration-200
+          hover:-translate-x-0.5
+          hover:text-blue-700
+          sm:mb-5
+        "
       >
-        <Icon icon="mdi:arrow-left" />
+        <Icon
+          icon="mdi:arrow-left"
+          width={18}
+        />
+
         Back to Polls
       </button>
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
+      {/* Header */}
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
           Create a Poll
         </h1>
 
-        <p className="mt-1 text-sm text-slate-600">
-          Create a question, add your options, and
-          share it with your audience.
+        <p className="mt-1 max-w-xl text-xs leading-5 text-slate-600 sm:text-sm">
+          Create a question, add your options,
+          and share it with your audience.
         </p>
-      </div>
+      </header>
 
       <PollForm
         mode="create"

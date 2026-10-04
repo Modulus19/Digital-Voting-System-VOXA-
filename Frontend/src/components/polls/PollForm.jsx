@@ -36,19 +36,27 @@ export default function PollForm({
   const [question, setQuestion] = useState(
     initialValues.question ?? ""
   );
+
   const [category, setCategory] = useState(
     initialValues.category ?? ""
   );
+
   const [options, setOptions] = useState(
     initialValues.options?.length >= 2
       ? initialValues.options.map((option) =>
-          typeof option === "string" ? option : option.text
+          typeof option === "string"
+            ? option
+            : option.text
         )
       : ["", ""]
   );
-  const [resultsVisibility, setResultsVisibility] = useState(
-    initialValues.resultsVisibility ?? "after_vote"
-  );
+
+  const [resultsVisibility, setResultsVisibility] =
+    useState(
+      initialValues.resultsVisibility ??
+        "after_vote"
+    );
+
   const [closesAt, setClosesAt] = useState(
     initialValues.closesAt ?? ""
   );
@@ -60,7 +68,9 @@ export default function PollForm({
   const isDirty =
     question.trim() ||
     category ||
-    options.some((option) => option.trim()) ||
+    options.some((option) =>
+      option.trim()
+    ) ||
     closesAt;
 
   useEffect(() => {
@@ -71,7 +81,10 @@ export default function PollForm({
       event.returnValue = "";
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener(
+      "beforeunload",
+      handleBeforeUnload
+    );
 
     return () => {
       window.removeEventListener(
@@ -82,21 +95,33 @@ export default function PollForm({
   }, [isDirty, isSubmitting]);
 
   const addOption = () => {
-    setOptions((current) => [...current, ""]);
+    setOptions((current) => [
+      ...current,
+      "",
+    ]);
   };
 
   const removeOption = (index) => {
     if (options.length <= 2) return;
 
     setOptions((current) =>
-      current.filter((_, optionIndex) => optionIndex !== index)
+      current.filter(
+        (_, optionIndex) =>
+          optionIndex !== index
+      )
     );
   };
 
-  const updateOption = (index, value) => {
+  const updateOption = (
+    index,
+    value
+  ) => {
     setOptions((current) =>
-      current.map((option, optionIndex) =>
-        optionIndex === index ? value : option
+      current.map(
+        (option, optionIndex) =>
+          optionIndex === index
+            ? value
+            : option
       )
     );
   };
@@ -105,31 +130,40 @@ export default function PollForm({
     const nextErrors = {};
 
     if (!question.trim()) {
-      nextErrors.question = "Poll question is required.";
+      nextErrors.question =
+        "Poll question is required.";
     }
 
     if (!category) {
-      nextErrors.category = "Please select a category.";
+      nextErrors.category =
+        "Please select a category.";
     }
 
     if (
       options.length < 2 ||
-      options.some((option) => !option.trim())
+      options.some(
+        (option) => !option.trim()
+      )
     ) {
       nextErrors.options =
         "Enter at least two poll options.";
     }
 
     if (!closesAt) {
-      nextErrors.closesAt = "Please select an end date.";
-    } else if (new Date(closesAt) <= new Date()) {
+      nextErrors.closesAt =
+        "Please select an end date.";
+    } else if (
+      new Date(closesAt) <= new Date()
+    ) {
       nextErrors.closesAt =
         "End date must be in the future.";
     }
 
     setErrors(nextErrors);
 
-    return Object.keys(nextErrors).length === 0;
+    return (
+      Object.keys(nextErrors).length === 0
+    );
   };
 
   const buildPayload = () => ({
@@ -141,7 +175,9 @@ export default function PollForm({
 
     resultsVisibility,
     category,
-    closesAt: new Date(closesAt).toISOString(),
+    closesAt: new Date(
+      closesAt
+    ).toISOString(),
   });
 
   const handleSave = () => {
@@ -159,72 +195,107 @@ export default function PollForm({
   const formatCategory = (value) => {
     if (!value) return "Category";
 
-    return value.charAt(0).toUpperCase() + value.slice(1);
+    return (
+      value.charAt(0).toUpperCase() +
+      value.slice(1)
+    );
   };
 
   return (
     <>
+      {/* Server error */}
       {serverError && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 sm:mb-6">
           {serverError}
         </div>
       )}
 
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {/* Form + preview */}
+      <div className="grid items-start gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
         {/* LEFT */}
-        <div className="space-y-7">
-
+        <div className="min-w-0 space-y-5 sm:space-y-6 lg:space-y-7">
           {/* QUESTION */}
-          <section className="rounded-sm border border-slate-200 bg-white p-6">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 transition-shadow duration-200 hover:shadow-sm sm:p-6">
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-900">
                 Poll Question{" "}
-                <span className="text-blue-600">*</span>
+                <span className="text-blue-600">
+                  *
+                </span>
               </label>
 
               <input
                 type="text"
                 value={question}
-                onChange={(e) =>
-                  setQuestion(e.target.value)
+                onChange={(event) =>
+                  setQuestion(
+                    event.target.value
+                  )
                 }
                 placeholder="What would you like to ask?"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="
+                  w-full rounded-lg border
+                  border-slate-200 bg-slate-50
+                  px-3 py-3 text-sm
+                  outline-none
+                  transition-all duration-200
+                  focus:border-blue-500
+                  focus:bg-white
+                  focus:ring-2
+                  focus:ring-blue-100
+                  sm:px-4
+                "
               />
 
               {errors.question && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-1.5 text-xs text-red-500">
                   {errors.question}
                 </p>
               )}
             </div>
 
-            <div className="mt-7 max-w-xs">
+            <div className="mt-6 w-full sm:mt-7 sm:max-w-xs">
               <label className="mb-2 block text-sm font-medium text-slate-800">
                 Category{" "}
-                <span className="text-blue-600">*</span>
+                <span className="text-blue-600">
+                  *
+                </span>
               </label>
 
               <select
                 value={category}
-                onChange={(e) =>
-                  setCategory(e.target.value)
+                onChange={(event) =>
+                  setCategory(
+                    event.target.value
+                  )
                 }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                className="
+                  w-full rounded-md border
+                  border-slate-200 bg-white
+                  px-3 py-2.5 text-sm
+                  outline-none
+                  transition-all duration-200
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
               >
                 <option value="">
                   Select a category
                 </option>
 
                 {categories.map((item) => (
-                  <option key={item} value={item}>
+                  <option
+                    key={item}
+                    value={item}
+                  >
                     {formatCategory(item)}
                   </option>
                 ))}
               </select>
 
               {errors.category && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-1.5 text-xs text-red-500">
                   {errors.category}
                 </p>
               )}
@@ -232,49 +303,79 @@ export default function PollForm({
           </section>
 
           {/* OPTIONS */}
-          <section className="rounded-sm border border-slate-200 bg-white p-6">
-            <h2 className="mb-5 text-sm font-semibold text-slate-900">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 transition-shadow duration-200 hover:shadow-sm sm:p-6">
+            <h2 className="mb-4 text-sm font-semibold text-slate-900 sm:mb-5">
               Poll Options{" "}
-              <span className="text-blue-600">*</span>
+              <span className="text-blue-600">
+                *
+              </span>
             </h2>
 
-            <div className="space-y-4">
-              {options.map((option, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-4"
-                >
-                  <input
-                    type="text"
-                    value={option}
-                    onChange={(e) =>
-                      updateOption(
-                        index,
-                        e.target.value
-                      )
-                    }
-                    placeholder="Enter an option"
-                    className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      removeOption(index)
-                    }
-                    disabled={options.length <= 2}
-                    aria-label={`Remove option ${
-                      index + 1
-                    }`}
-                    className="flex h-9 w-9 items-center justify-center text-slate-600 transition hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+            <div className="space-y-3 sm:space-y-4">
+              {options.map(
+                (option, index) => (
+                  <div
+                    key={index}
+                    className="flex min-w-0 items-center gap-2 sm:gap-4"
                   >
-                    <Icon
-                      icon="mdi:trash-can-outline"
-                      className="text-xl"
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(event) =>
+                        updateOption(
+                          index,
+                          event.target.value
+                        )
+                      }
+                      placeholder={`Option ${
+                        index + 1
+                      }`}
+                      className="
+                        min-w-0 flex-1
+                        rounded-lg border
+                        border-slate-200
+                        bg-slate-50 px-3 py-3
+                        text-sm outline-none
+                        transition-all duration-200
+                        focus:border-blue-500
+                        focus:bg-white
+                        focus:ring-2
+                        focus:ring-blue-100
+                        sm:px-4
+                      "
                     />
-                  </button>
-                </div>
-              ))}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeOption(index)
+                      }
+                      disabled={
+                        options.length <= 2
+                      }
+                      aria-label={`Remove option ${
+                        index + 1
+                      }`}
+                      className="
+                        flex h-10 w-10 shrink-0
+                        items-center justify-center
+                        rounded-lg text-slate-500
+                        transition-all duration-200
+                        hover:bg-red-50
+                        hover:text-red-500
+                        active:scale-95
+                        disabled:cursor-not-allowed
+                        disabled:opacity-30
+                      "
+                    >
+                      <Icon
+                        icon="mdi:trash-can-outline"
+                        className="text-xl"
+                      />
+                    </button>
+                  </div>
+                )
+              )}
             </div>
 
             {errors.options && (
@@ -286,71 +387,112 @@ export default function PollForm({
             <button
               type="button"
               onClick={addOption}
-              className="mt-5 flex items-center gap-1 rounded-md border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition hover:bg-blue-50"
+              className="
+                mt-4 flex min-h-10
+                items-center gap-1.5
+                rounded-md border
+                border-blue-500 px-4 py-2
+                text-sm font-medium
+                text-blue-600
+                transition-all duration-200
+                hover:bg-blue-50
+                active:scale-[0.98]
+                sm:mt-5
+              "
             >
               <Icon icon="mdi:plus" />
+
               Add an option
             </button>
           </section>
 
           {/* SETTINGS */}
-          <section className="rounded-sm border border-slate-200 bg-white p-6">
-            <h2 className="mb-6 text-sm font-semibold text-slate-900">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 transition-shadow duration-200 hover:shadow-sm sm:p-6">
+            <h2 className="mb-5 text-sm font-semibold text-slate-900 sm:mb-6">
               Poll Settings{" "}
-              <span className="text-blue-600">*</span>
+              <span className="text-blue-600">
+                *
+              </span>
             </h2>
 
-            <div className="grid gap-7 md:grid-cols-2">
-              <div>
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-7">
+              {/* Visibility */}
+              <div className="min-w-0">
                 <label className="mb-2 block text-sm font-semibold text-slate-800">
                   Results Visibility
                 </label>
 
-                <p className="mb-3 text-xs text-slate-500">
-                  Choose when voters can see the
-                  poll results.
+                <p className="mb-3 text-xs leading-5 text-slate-500">
+                  Choose when voters can see
+                  the poll results.
                 </p>
 
                 <select
-                  value={resultsVisibility}
-                  onChange={(e) =>
+                  value={
+                    resultsVisibility
+                  }
+                  onChange={(event) =>
                     setResultsVisibility(
-                      e.target.value
+                      event.target.value
                     )
                   }
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                  className="
+                    w-full rounded-md border
+                    border-slate-200 bg-white
+                    px-3 py-2.5 text-sm
+                    outline-none
+                    transition-all duration-200
+                    focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
+                  "
                 >
-                  {visibilityOptions.map((item) => (
-                    <option
-                      key={item.value}
-                      value={item.value}
-                    >
-                      {item.label}
-                    </option>
-                  ))}
+                  {visibilityOptions.map(
+                    (item) => (
+                      <option
+                        key={item.value}
+                        value={item.value}
+                      >
+                        {item.label}
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
 
-              <div>
+              {/* End date */}
+              <div className="min-w-0">
                 <label className="mb-2 block text-sm font-semibold text-slate-800">
                   End Date
                 </label>
 
-                <p className="mb-3 text-xs text-slate-500">
+                <p className="mb-3 text-xs leading-5 text-slate-500">
                   Set when your poll will end.
                 </p>
 
                 <input
                   type="datetime-local"
                   value={closesAt}
-                  onChange={(e) =>
-                    setClosesAt(e.target.value)
+                  onChange={(event) =>
+                    setClosesAt(
+                      event.target.value
+                    )
                   }
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                  className="
+                    w-full min-w-0
+                    rounded-md border
+                    border-slate-200 bg-white
+                    px-3 py-2.5 text-sm
+                    outline-none
+                    transition-all duration-200
+                    focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
+                  "
                 />
 
                 {errors.closesAt && (
-                  <p className="mt-1 text-xs text-red-500">
+                  <p className="mt-1.5 text-xs text-red-500">
                     {errors.closesAt}
                   </p>
                 )}
@@ -360,55 +502,79 @@ export default function PollForm({
         </div>
 
         {/* LIVE PREVIEW */}
-        <aside className="rounded-lg border border-blue-500 bg-white p-6 lg:sticky lg:top-6">
-          <div className="mb-7 flex items-center gap-2 text-sm font-semibold text-slate-800">
+        <aside className="min-w-0 rounded-xl border border-blue-500 bg-white p-4 transition-shadow duration-200 hover:shadow-sm sm:p-6 lg:sticky lg:top-6">
+          <div className="mb-5 flex items-center gap-2 text-sm font-semibold text-slate-800 sm:mb-7">
             <Icon
               icon="mdi:eye-outline"
               className="text-lg text-blue-500"
             />
+
             Live Preview
           </div>
 
-          <div className="rounded-md border border-slate-200 p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h3 className="max-w-[180px] break-words text-sm font-semibold text-slate-900">
+          <div className="rounded-lg border border-slate-200 p-3 sm:p-4">
+            <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="break-words text-sm font-semibold leading-5 text-slate-900 lg:max-w-[180px]">
                   {question ||
                     "Your Poll Question"}
                 </h3>
 
                 <p className="mt-1 text-[11px] text-slate-500">
-                  {formatCategory(category)} · 0 votes
+                  {formatCategory(
+                    category
+                  )}{" "}
+                  · 0 votes
                 </p>
               </div>
 
-              <span className="whitespace-nowrap text-[10px] text-slate-400">
+              <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">
                 Ends in
               </span>
             </div>
 
-            <div className="space-y-3">
-              {options.map((option, index) => (
-                <div
-                  key={index}
-                  className="rounded-lg bg-slate-100 px-4 py-3 text-xs font-medium text-slate-700"
-                >
-                  {option ||
-                    `Option ${index + 1}`}
-                </div>
-              ))}
+            <div className="space-y-2.5 sm:space-y-3">
+              {options.map(
+                (option, index) => (
+                  <div
+                    key={index}
+                    className="
+                      break-words rounded-lg
+                      bg-slate-100 px-3 py-2.5
+                      text-xs font-medium
+                      text-slate-700
+                      transition-all duration-200
+                      sm:px-4 sm:py-3
+                    "
+                  >
+                    {option ||
+                      `Option ${index + 1}`}
+                  </div>
+                )
+              )}
             </div>
           </div>
         </aside>
       </div>
 
       {/* ACTIONS */}
-      <div className="mt-8 flex flex-wrap justify-end gap-4">
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-4">
         <button
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="rounded-lg border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+          className="
+            min-h-11 w-full rounded-lg
+            border border-slate-200
+            bg-white px-5 py-3
+            text-sm font-semibold
+            text-slate-500
+            transition-all duration-200
+            hover:bg-slate-50
+            active:scale-[0.98]
+            disabled:opacity-50
+            sm:w-auto sm:px-6
+          "
         >
           Cancel
         </button>
@@ -417,7 +583,19 @@ export default function PollForm({
           type="button"
           onClick={handleSave}
           disabled={isSubmitting}
-          className="rounded-lg border border-blue-500 bg-white px-6 py-3 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="
+            min-h-11 w-full rounded-lg
+            border border-blue-500
+            bg-white px-5 py-3
+            text-sm font-semibold
+            text-blue-600
+            transition-all duration-200
+            hover:bg-blue-50
+            active:scale-[0.98]
+            disabled:cursor-not-allowed
+            disabled:opacity-50
+            sm:w-auto sm:px-6
+          "
         >
           {submitAction === "save"
             ? "Saving..."
@@ -431,7 +609,18 @@ export default function PollForm({
             type="button"
             onClick={handlePublish}
             disabled={isSubmitting}
-            className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="
+              min-h-11 w-full rounded-lg
+              bg-blue-600 px-5 py-3
+              text-sm font-semibold
+              text-white
+              transition-all duration-200
+              hover:bg-blue-700
+              active:scale-[0.98]
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              sm:w-auto sm:px-6
+            "
           >
             {submitAction === "publish"
               ? "Publishing..."

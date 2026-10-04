@@ -45,7 +45,9 @@ export default function EditPoll() {
           response;
 
         if (!loadedPoll?.id) {
-          throw new Error("Poll was not returned.");
+          throw new Error(
+            "Poll was not returned."
+          );
         }
 
         if (loadedPoll.status !== "draft") {
@@ -116,7 +118,7 @@ export default function EditPoll() {
 
   if (loading) {
     return (
-      <div className="py-24">
+      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16 sm:py-24">
         <Loading size="large" />
       </div>
     );
@@ -124,37 +126,56 @@ export default function EditPoll() {
 
   if (loadError) {
     return (
-      <Error
-        message={loadError}
-        onRetry={() =>
-          setRetryCount((count) => count + 1)
-        }
-      />
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <Error
+          message={loadError}
+          onRetry={() =>
+            setRetryCount(
+              (count) => count + 1
+            )
+          }
+        />
+      </div>
     );
   }
 
   if (!poll) return null;
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+      {/* Back */}
       <button
         type="button"
-        onClick={() => navigate("/my-polls")}
-        className="mb-5 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+        onClick={() =>
+          navigate("/my-polls")
+        }
+        className="
+          mb-4 flex items-center gap-1.5
+          text-sm font-medium text-blue-600
+          transition-all duration-200
+          hover:-translate-x-0.5
+          hover:text-blue-700
+          sm:mb-5
+        "
       >
-        <Icon icon="mdi:arrow-left" />
+        <Icon
+          icon="mdi:arrow-left"
+          width={18}
+        />
+
         Back to My Polls
       </button>
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
+      {/* Header */}
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
           Edit Poll
         </h1>
 
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 max-w-xl text-xs leading-5 text-slate-600 sm:text-sm">
           Update your poll before publishing it.
         </p>
-      </div>
+      </header>
 
       <PollForm
         mode="edit"
@@ -168,9 +189,13 @@ export default function EditPoll() {
             poll.closesAt
           ),
         }}
-        onCancel={() => navigate("/my-polls")}
+        onCancel={() =>
+          navigate("/my-polls")
+        }
         onSave={handleSave}
-        onPublish={handleSaveAndPublish}
+        onPublish={
+          handleSaveAndPublish
+        }
         serverError={serverError}
         submitAction={submitAction}
       />
@@ -183,12 +208,16 @@ function toDateTimeLocal(value) {
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "";
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
 
-  const offset = date.getTimezoneOffset();
+  const offset =
+    date.getTimezoneOffset();
 
   const localDate = new Date(
-    date.getTime() - offset * 60 * 1000
+    date.getTime() -
+      offset * 60 * 1000
   );
 
   return localDate
