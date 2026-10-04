@@ -26,6 +26,7 @@ export default function VotingSection({
   status,
   resultsVisibility,
   onVoteSubmitted,
+  onResultsLoaded,
 }) {
   const [myVote, setMyVote] = useState(null);
   const [results, setResults] = useState(null);
@@ -142,7 +143,10 @@ export default function VotingSection({
         );
 
         if (!cancelled) {
-          setResults(response.data.data);
+          const resultsData = response.data.data;
+
+          setResults(resultsData);
+          onResultsLoaded?.(resultsData);
         }
       } catch (error) {
         if (cancelled) return;
@@ -180,6 +184,7 @@ export default function VotingSection({
     resultsVisibility,
     status,
     myVote,
+    onResultsLoaded
   ]);
 
   /**

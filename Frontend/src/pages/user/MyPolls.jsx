@@ -44,7 +44,6 @@ export default function MyPolls() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-
   const [confirmAction, setConfirmAction] = useState(null);
 
   useEffect(() => {
@@ -63,9 +62,14 @@ export default function MyPolls() {
 
         const allPolls = response?.data?.polls ?? [];
 
-        const myPolls = allPolls.filter(
-          (poll) => String(poll.creator) === String(user.id)
-        );
+        const myPolls = allPolls.filter((poll) => {
+          const creatorId =
+            typeof poll.creator === "object"
+              ? poll.creator?.id || poll.creator?._id
+              : poll.creator;
+
+          return String(creatorId) === String(userId);
+        });
 
         setPolls(myPolls);
       } catch (err) {
@@ -108,6 +112,7 @@ export default function MyPolls() {
 
   const closeConfirmation = () => {
     if (actionLoading) return;
+
     setConfirmAction(null);
   };
 
@@ -216,7 +221,7 @@ export default function MyPolls() {
 
   if (loading) {
     return (
-      <div className="py-24">
+      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16 sm:py-24">
         <Loading size="large" />
       </div>
     );
@@ -224,23 +229,27 @@ export default function MyPolls() {
 
   if (error && polls.length === 0) {
     return (
-      <Error
-        message={error}
-        onRetry={() => setRetryCount((count) => count + 1)}
-      />
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <Error
+          message={error}
+          onRetry={() =>
+            setRetryCount((count) => count + 1)
+          }
+        />
+      </div>
     );
   }
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+      <header className="mb-5 flex items-start justify-between gap-4 sm:mb-6 sm:items-center">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
             My Polls
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
             {polls.length === 0
               ? "You haven't created any polls yet."
               : `${polls.length} ${
@@ -255,33 +264,46 @@ export default function MyPolls() {
             onClick={() => navigate("/polls/create")}
             title="Create Poll"
             aria-label="Create Poll"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white transition hover:bg-blue-700"
+            className="
+              flex h-10 w-10 shrink-0 items-center justify-center
+              rounded-full bg-blue-600 text-white
+              transition-all duration-200
+              hover:scale-105 hover:bg-blue-700
+              active:scale-95
+            "
           >
             <Icon icon="mdi:plus" className="text-xl" />
           </button>
         )}
-      </div>
+      </header>
 
       {/* Non-blocking action error */}
       {error && polls.length > 0 && (
-        <div className="mb-5 flex items-center justify-between rounded-lg border border-red-100 bg-red-50 px-4 py-3">
-          <p className="text-sm text-red-600">
+        <div className="mb-5 flex items-start justify-between gap-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3">
+          <p className="min-w-0 text-sm leading-5 text-red-600">
             {error}
           </p>
 
           <button
             type="button"
             onClick={() => setError("")}
-            className="text-red-500"
+            aria-label="Dismiss error"
+            className="
+              flex h-7 w-7 shrink-0 items-center justify-center
+              rounded-md text-red-500
+              transition-colors duration-200
+              hover:bg-red-100
+            "
           >
             <Icon icon="mdi:close" />
           </button>
         </div>
       )}
 
+      {/* Filters */}
       {polls.length > 0 && (
-        <div className="mb-7">
-          <FilterPills 
+        <div className="mb-5 sm:mb-7">
+          <FilterPills
             filters={FILTERS}
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
@@ -291,94 +313,132 @@ export default function MyPolls() {
 
       {/* Empty account */}
       {polls.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center sm:px-6 sm:py-16">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 sm:mb-5 sm:h-14 sm:w-14">
             <Icon
               icon="mdi:poll-box-outline"
-              className="text-3xl text-blue-600"
+              className="text-2xl text-blue-600 sm:text-3xl"
             />
           </div>
 
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
             You haven't created any polls yet
           </h2>
 
-          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
             Create your first poll and start collecting votes.
           </p>
 
           <button
             type="button"
             onClick={() => navigate("/polls/create")}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            className="
+              mt-6 inline-flex min-h-11 w-full items-center
+              justify-center gap-2 rounded-lg bg-blue-600
+              px-5 py-2.5 text-sm font-semibold text-white
+              transition-all duration-200
+              hover:bg-blue-700 active:scale-[0.98]
+              sm:w-auto
+            "
           >
             <Icon icon="mdi:plus" />
             Create your first poll
           </button>
         </div>
       ) : filteredPolls.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-6 py-14 text-center">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center sm:px-6 sm:py-14">
+          <Icon
+            icon="mdi:filter-outline"
+            className="mx-auto mb-3 text-2xl text-slate-400"
+          />
+
           <p className="text-sm text-slate-500">
             No {activeFilter.toLowerCase()} polls found.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
           {filteredPolls.map((poll) => {
             const isWorking = actionLoading === poll.id;
 
             return (
               <article
                 key={poll.id}
-                className="flex min-h-[260px] flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                className="
+                  flex min-w-0 flex-col rounded-xl
+                  border border-slate-200 bg-white p-4
+                  shadow-sm transition-all duration-200
+                  hover:-translate-y-0.5 hover:shadow-md
+                  sm:min-h-[260px] sm:p-5
+                "
               >
-                {/* Status/category */}
+                {/* Status + category */}
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-                      statusStyles[poll.status] ||
-                      "bg-slate-100 text-slate-600"
-                    }`}
+                    className={`
+                      shrink-0 rounded-full px-2.5 py-1
+                      text-[11px] font-semibold capitalize sm:px-3 sm:text-xs
+                      ${
+                        statusStyles[poll.status] ||
+                        "bg-slate-100 text-slate-600"
+                      }
+                    `}
                   >
                     {poll.status}
                   </span>
 
-                  <div className="flex items-center gap-1.5 text-xs capitalize text-slate-500">
+                  <div className="flex min-w-0 items-center gap-1.5 text-xs capitalize text-slate-500">
                     <Icon
                       icon={
                         categoryIcons[poll.category] ||
                         categoryIcons.others
                       }
+                      className="shrink-0"
                     />
-                    {poll.category}
+
+                    <span className="truncate">
+                      {poll.category}
+                    </span>
                   </div>
                 </div>
 
                 {/* Question */}
-                <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">
+                <h2 className="line-clamp-2 break-words text-sm font-semibold leading-6 text-slate-900 sm:text-base">
                   {poll.question}
                 </h2>
 
                 {/* Metadata */}
-                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5">
-                    <Icon icon="mdi:vote-outline" />
-                    {(poll.votesCount ?? 0).toLocaleString()} votes
-                  </span>
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 sm:mt-5 sm:gap-x-5">
+                  {poll.votesCount !== null &&
+                    poll.votesCount !== undefined && (
+                      <span className="flex items-center gap-1.5">
+                        <Icon icon="mdi:vote-outline" />
+
+                        {poll.votesCount.toLocaleString()}{" "}
+                        {poll.votesCount === 1
+                          ? "vote"
+                          : "votes"}
+                      </span>
+                    )}
 
                   <span className="flex items-center gap-1.5">
                     <Icon icon="mdi:format-list-bulleted" />
-                    {poll.options?.length ?? 0} options
+
+                    {poll.options?.length ?? 0}{" "}
+                    {(poll.options?.length ?? 0) === 1
+                      ? "option"
+                      : "options"}
                   </span>
 
                   <span className="flex items-center gap-1.5">
                     <Icon icon="mdi:calendar-outline" />
+
                     Ends {formatDate(poll.closesAt)}
                   </span>
                 </div>
 
                 {/* Actions */}
-                <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-5">
+                <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 sm:mt-auto sm:pt-5">
                   {poll.status === "draft" && (
                     <>
                       <button
@@ -387,7 +447,13 @@ export default function MyPolls() {
                         onClick={() =>
                           navigate(`/polls/${poll.id}/edit`)
                         }
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        className="
+                          min-h-9 rounded-lg border border-slate-200
+                          px-3 py-2 text-xs font-semibold text-slate-700
+                          transition-all duration-200
+                          hover:bg-slate-50 active:scale-[0.98]
+                          disabled:cursor-not-allowed disabled:opacity-50
+                        "
                       >
                         Edit
                       </button>
@@ -398,7 +464,13 @@ export default function MyPolls() {
                         onClick={() =>
                           openConfirmation("publish", poll)
                         }
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="
+                          min-h-9 rounded-lg bg-blue-600
+                          px-3 py-2 text-xs font-semibold text-white
+                          transition-all duration-200
+                          hover:bg-blue-700 active:scale-[0.98]
+                          disabled:cursor-not-allowed disabled:opacity-50
+                        "
                       >
                         Publish
                       </button>
@@ -412,7 +484,12 @@ export default function MyPolls() {
                         onClick={() =>
                           navigate(`/polls/${poll.id}`)
                         }
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        className="
+                          min-h-9 rounded-lg border border-slate-200
+                          px-3 py-2 text-xs font-semibold text-slate-700
+                          transition-all duration-200
+                          hover:bg-slate-50 active:scale-[0.98]
+                        "
                       >
                         View
                       </button>
@@ -423,7 +500,13 @@ export default function MyPolls() {
                         onClick={() =>
                           openConfirmation("close", poll)
                         }
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        className="
+                          min-h-9 rounded-lg border border-slate-200
+                          px-3 py-2 text-xs font-semibold text-slate-700
+                          transition-all duration-200
+                          hover:bg-slate-50 active:scale-[0.98]
+                          disabled:cursor-not-allowed disabled:opacity-50
+                        "
                       >
                         Close
                       </button>
@@ -436,7 +519,12 @@ export default function MyPolls() {
                       onClick={() =>
                         navigate(`/polls/${poll.id}`)
                       }
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      className="
+                        min-h-9 rounded-lg border border-slate-200
+                        px-3 py-2 text-xs font-semibold text-slate-700
+                        transition-all duration-200
+                        hover:bg-slate-50 active:scale-[0.98]
+                      "
                     >
                       View Results
                     </button>
@@ -448,10 +536,19 @@ export default function MyPolls() {
                     onClick={() =>
                       openConfirmation("delete", poll)
                     }
-                    className="ml-auto inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    className="
+                      ml-auto inline-flex min-h-9 items-center gap-1
+                      rounded-lg px-2.5 py-2 text-xs font-semibold
+                      text-red-500 transition-all duration-200
+                      hover:bg-red-50 active:scale-[0.98]
+                      disabled:cursor-not-allowed disabled:opacity-50
+                      sm:px-3
+                    "
                   >
                     <Icon icon="mdi:trash-can-outline" />
-                    Delete
+                    <span className="hidden xs:inline sm:inline">
+                      Delete
+                    </span>
                   </button>
                 </div>
               </article>
