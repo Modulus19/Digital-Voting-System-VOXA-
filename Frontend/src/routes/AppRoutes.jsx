@@ -37,7 +37,8 @@ import EditProfile from '../pages/user/EditProfile'
 import Dashboard from '../pages/admin/Dashboard'
 import AllPolls from '../pages/admin/AllPolls'
 import ManageUsers from '../pages/admin/ManageUsers'
-import PollResults from '../pages/admin/PollResults'
+import AdminPollDetails from '../pages/admin/PollDetails'
+import Settings from '../pages/admin/Settings'
 
 function AppRoutes() {
   return (
@@ -74,15 +75,16 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Admin Routes — protected and admin-only */}
-      <Route element={<AdminRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<Dashboard />} />
-          <Route path="/admin/polls" element={<AllPolls />} />
-          <Route path="/admin/users" element={<ManageUsers />} />
-          <Route path="/admin/results" element={<PollResults />} />
-        </Route>
+    {/* Admin Routes — protected and admin-only */}
+    <Route element={<AdminRoute />}>
+      <Route element={<AdminLayout />}>
+        <Route path="/admin" element={<Dashboard />} />
+        <Route path="/admin/polls" element={<AllPolls />} />
+        <Route path="/admin/polls/:id" element={<AdminPollDetails />} />
+        <Route path="/admin/users" element={<ManageUsers />} />
+        <Route path="/admin/settings" element={<Settings />} />
       </Route>
+    </Route>
 
       {/* Not Found */}
       <Route path="*" element={<NotFound />} />
