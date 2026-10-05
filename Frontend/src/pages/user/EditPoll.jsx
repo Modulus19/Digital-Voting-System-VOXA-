@@ -25,6 +25,8 @@ export default function EditPoll() {
   const [serverError, setServerError] = useState("");
   const [submitAction, setSubmitAction] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [leaveRequest, setLeaveRequest] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,9 +148,14 @@ export default function EditPoll() {
       {/* Back */}
       <button
         type="button"
-        onClick={() =>
-          navigate("/my-polls")
-        }
+        onClick={() => {
+          if (!isFormDirty) {
+            navigate("/my-polls");
+            return;
+          }
+
+          setLeaveRequest((request) => request + 1);
+        }}
         className="
           mb-4 flex items-center gap-1.5
           text-sm font-medium text-blue-600
@@ -198,6 +205,8 @@ export default function EditPoll() {
         }
         serverError={serverError}
         submitAction={submitAction}
+        onDirtyChange={setIsFormDirty}
+        leaveRequest={leaveRequest}
       />
     </div>
   );

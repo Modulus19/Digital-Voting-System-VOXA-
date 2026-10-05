@@ -32,6 +32,8 @@ export default function PollForm({
   onPublish,
   serverError = "",
   submitAction = null,
+  onDirtyChange,
+  leaveRequest = 0,
 }) {
   const [question, setQuestion] = useState(
     initialValues.question ?? ""
@@ -63,15 +65,30 @@ export default function PollForm({
 
   const [errors, setErrors] = useState({});
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   const isSubmitting = submitAction !== null;
 
+  const initialOptions =
+    initialValues.options?.length >= 2
+      ? initialValues.options.map((option) =>
+          typeof option === "string"
+            ? option
+            : option.text
+        )
+      : ["", ""];
+
   const isDirty =
-    question.trim() ||
-    category ||
-    options.some((option) =>
-      option.trim()
-    ) ||
-    closesAt;
+    question !== (initialValues.question ?? "") ||
+    category !== (initialValues.category ?? "") ||
+    JSON.stringify(options) !== JSON.stringify(initialOptions) ||
+    resultsVisibility !==
+      (initialValues.resultsVisibility ?? "after_vote") ||
+    closesAt !== (initialValues.closesAt ?? "");
+
+  useEffect(() => {
+    onDirtyChange?.(Boolean(isDirty));
+  }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -199,6 +216,26 @@ export default function PollForm({
       value.charAt(0).toUpperCase() +
       value.slice(1)
     );
+  };
+
+  const handleCancelRequest = () => {
+    if (!isDirty) {
+      onCancel();
+      return;
+    }
+
+    setShowCancelModal(true);
+  };
+
+  useEffect(() => {
+    if (!leaveRequest) return;
+
+    handleCancelRequest();
+  }, [leaveRequest]);
+
+  const confirmCancel = () => {
+    setShowCancelModal(false);
+    onCancel();
   };
 
   return (
@@ -561,7 +598,7 @@ export default function PollForm({
       <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-4">
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancelRequest}
           disabled={isSubmitting}
           className="
             min-h-11 w-full rounded-lg
@@ -628,6 +665,101 @@ export default function PollForm({
                 ? "Save & Publish"
                 : "Publish Poll"}
           </button>
+        )}
+
+        {showCancelModal && (
+          <div
+            className="
+              fixed inset-0 z-50
+              flex items-center justify-center
+              bg-black/40 px-4
+            "
+            onMouseDown={() => setShowCancelModal(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cancel-poll-title"
+              onMouseDown={(event) => event.stopPropagation()}
+              className="
+                relative w-full max-w-md
+                rounded-xl bg-white p-5
+                shadow-xl
+                sm:p-6
+              "
+            >
+              <button
+                type="button"
+                aria-label="Close confirmation"
+                onClick={() => setShowCancelModal(false)}
+                className="
+                  absolute right-4 top-4
+                  flex h-8 w-8 items-center justify-center
+                  rounded-full text-slate-400
+                  transition-colors
+                  hover:bg-slate-100 hover:text-slate-700
+                "
+              >
+                <Icon icon="mdi:close" width={20} />
+              </button>
+
+              <div
+                className="
+                  mb-4 flex h-11 w-11
+                  items-center justify-center
+                  rounded-full bg-red-50
+                  text-red-500
+                "
+              >
+                <Icon
+                  icon="mdi:alert-outline"
+                  width={24}
+                />
+              </div>
+
+              <h2
+                id="cancel-poll-title"
+                className="pr-8 text-lg font-bold text-slate-900"
+              >
+                Discard unsaved changes?
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Your unsaved changes will be lost if you leave this page.
+              </p>
+
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="
+                    min-h-10 rounded-lg
+                    border border-slate-200
+                    px-4 py-2 text-sm font-semibold
+                    text-slate-700
+                    transition-colors
+                    hover:bg-slate-50
+                  "
+                >
+                  Keep Editing
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmCancel}
+                  className="
+                    min-h-10 rounded-lg
+                    bg-red-600 px-4 py-2
+                    text-sm font-semibold text-white
+                    transition-colors
+                    hover:bg-red-700
+                  "
+                >
+                  Discard Changes
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </>

@@ -13,6 +13,8 @@ export default function CreatePoll() {
 
   const [serverError, setServerError] = useState("");
   const [submitAction, setSubmitAction] = useState(null);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [leaveRequest, setLeaveRequest] = useState(0);
 
   const handleSaveDraft = async (payload) => {
     try {
@@ -70,7 +72,14 @@ export default function CreatePoll() {
       {/* Back */}
       <button
         type="button"
-        onClick={() => navigate("/polls")}
+        onClick={() => {
+          if (!isFormDirty) {
+            navigate("/polls");
+            return;
+          }
+
+          setLeaveRequest((request) => request + 1);
+        }}
         className="
           mb-4 flex items-center gap-1.5
           text-sm font-medium text-blue-600
@@ -107,6 +116,8 @@ export default function CreatePoll() {
         onPublish={handlePublish}
         serverError={serverError}
         submitAction={submitAction}
+        onDirtyChange={setIsFormDirty}
+        leaveRequest={leaveRequest}
       />
     </div>
   );
