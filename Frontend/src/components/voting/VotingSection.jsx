@@ -30,6 +30,7 @@ export default function VotingSection({
 }) {
   const [myVote, setMyVote] = useState(null);
   const [results, setResults] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -188,18 +189,20 @@ export default function VotingSection({
   ]);
 
   /**
-   * Immediately submit the vote when an option
-   * is clicked.
-   */
-  const submitVote = async (optionId) => {
+   * Submit the currently selected option.
+   * Selection remains changeable until submission.
+  */
+  const submitVote = async () => {
     if (
-      !optionId ||
+      !selectedOption ||
       submitting ||
       alreadyVoted ||
       !pollIsOpen
     ) {
       return;
     }
+
+    const optionId = selectedOption;
 
     try {
       setSubmitting(true);
@@ -286,22 +289,21 @@ export default function VotingSection({
           const result =
             getResultForOption(option.id);
 
-          const isMyVote =
-            alreadyVoted &&
-            String(selectedVoteId) ===
-              String(option.id);
+          const isSelected = alreadyVoted
+            ? String(selectedVoteId) === String(option.id)
+            : String(selectedOption) === String(option.id);
 
           return (
             <VoteOption
               key={option.id}
               option={option}
-              selected={isMyVote}
+              selected={isSelected}
               disabled={
                 !pollIsOpen ||
                 alreadyVoted ||
                 submitting
               }
-              onSelect={submitVote}
+              onSelect={setSelectedOption}
               result={result}
               showResults={showResults}
             />
@@ -309,15 +311,35 @@ export default function VotingSection({
         })}
       </div>
 
-      {/* Vote submission state */}
-      {submitting && (
-        <p className="mt-3 text-xs text-text-muted">
-          Submitting vote...
-        </p>
-      )}
+      {/* Submit vote */}
+      {pollIsOpen &&
+        !alreadyVoted &&
+        selectedOption && (
+          <button
+            type="button"
+            onClick={submitVote}
+            disabled={submitting}
+            className="
+              mt-4 inline-flex min-h-10
+              items-center justify-center
+              rounded-lg bg-blue-600
+              px-5 py-2.5
+              text-sm font-semibold text-white
+              transition-all duration-200
+              hover:bg-blue-700
+              active:scale-[0.98]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+            {submitting
+              ? "Submitting..."
+              : "Submit Vote"}
+          </button>
+        )}
 
       {/* Results loading state */}
-      {!submitting && resultsLoading && (
+      {resultsLoading && (
         <p className="mt-3 text-xs text-text-muted">
           Loading results...
         </p>
