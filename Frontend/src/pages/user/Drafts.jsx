@@ -97,12 +97,25 @@ export default function Drafts() {
   }, [userId, retryCount]);
 
   const filteredDrafts = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const searchTerms = search
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
 
     return drafts.filter((poll) => {
-      const matchesSearch =
-        !query ||
-        poll.question?.toLowerCase().includes(query);
+      const searchableText = [
+        poll.question,
+        poll.category,
+        ...(poll.options?.map((option) => option.text) ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch = searchTerms.every((term) =>
+        searchableText.includes(term)
+      );
 
       const matchesCategory =
         activeCategory === "All" ||
@@ -229,13 +242,35 @@ export default function Drafts() {
     <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       {/* Header */}
       <header className="mb-5 sm:mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Drafts
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-text-heading sm:text-2xl">
+              Drafts
+            </h1>
 
-        <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-          Continue working on polls you haven't published yet.
-        </p>
+            <p className="mt-1 max-w-xl text-xs leading-5 text-slate-600 sm:text-sm">
+              Continue working on polls you haven't published yet.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Create a poll"
+            title="Create Poll"
+            onClick={() => navigate("/polls/create")}
+            className="
+              flex h-8 w-8 shrink-0 sm:h-9 sm:w-9
+              items-center justify-center
+              rounded-full bg-slate-200
+              text-text-heading
+              transition-all duration-200
+              hover:scale-105 hover:bg-slate-300
+              active:scale-95
+            "
+          >
+            <Icon icon="mdi:plus" width={24} />
+          </button>
+        </div>
       </header>
 
       {/* Action error */}
