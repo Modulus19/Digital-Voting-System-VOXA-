@@ -1,8 +1,4 @@
-// function EditProfile() {
-//   return <h1>EditProfile Page</h1>
-// }
 
-// export default EditProfile
 
 import Input from "../../components/common/Input";
 
@@ -60,13 +56,7 @@ export default function EditProfile() {
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4 text-left">
             <div>
               <label className="block text-xs font-semibold text-gray-800 mb-1">Username</label>
-              {/* <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 text-sm bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800"
-              /> */}
+  
               <Input
   label="Username"
   name="username"
@@ -133,3 +123,4 @@ export default function EditProfile() {
     </div>
   );
 }
+

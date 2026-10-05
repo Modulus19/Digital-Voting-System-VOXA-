@@ -39,3 +39,9 @@ export const getCurrentUser = async () => {
   const response = await api.get("/auth/me");
   return response.data;
 };
+
+
+export const getVoteHistory = async () => {
+  const response = await api.get("/votes/history");
+  return response.data;
+};
