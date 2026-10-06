@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
     }
 
     getCurrentUser()
-      .then((res) => setUser(res.data.user)) // added .user
+      .then((res) => setUser(res.data.user))
       .catch(() => {
         localStorage.removeItem("accessToken");
       })
