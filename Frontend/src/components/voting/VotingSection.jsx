@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
 import api from "../../services/api";
 
 import VoteOption from "./VoteOption";
@@ -275,7 +276,7 @@ export default function VotingSection({
   };
 
   return (
-    <div className="mt-5 w-full">
+    <div className="mt-3 w-full">
       {/* Error message */}
       {errorMessage && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -286,8 +287,7 @@ export default function VotingSection({
       {/* Voting options / results */}
       <div className="space-y-3">
         {options.map((option) => {
-          const result =
-            getResultForOption(option.id);
+          const result = getResultForOption(option.id);
 
           const isSelected = alreadyVoted
             ? String(selectedVoteId) === String(option.id)
@@ -303,7 +303,13 @@ export default function VotingSection({
                 alreadyVoted ||
                 submitting
               }
-              onSelect={setSelectedOption}
+              onSelect={(optionId) => {
+                setSelectedOption((current) =>
+                  String(current) === String(optionId)
+                    ? null
+                    : optionId
+                );
+              }}
               result={result}
               showResults={showResults}
             />
@@ -311,16 +317,62 @@ export default function VotingSection({
         })}
       </div>
 
+      {/* Vote submitted — results available after poll closes */}
+      {alreadyVoted &&
+        !showResults &&
+        resultsVisibility === "after_close" && (
+          <div className="mt-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <Icon
+                icon="mdi:check-circle"
+                width={16}
+              />
+              Vote submitted
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Results will be available when this poll closes.
+            </p>
+          </div>
+        )}
+
+      {/* Vote submitted — results are private */}
+      {alreadyVoted &&
+        !showResults &&
+        resultsVisibility === "admin_only" && (
+          <div className="mt-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <Icon
+                icon="mdi:check-circle"
+                width={16}
+              />
+              Vote submitted
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Results for this poll are private.
+            </p>
+          </div>
+        )}
+
       {/* Submit vote */}
-      {pollIsOpen &&
-        !alreadyVoted &&
-        selectedOption && (
+      {pollIsOpen && !alreadyVoted && (
+        <div
+          className={`
+            overflow-hidden transition-all duration-300 ease-out
+            ${
+              selectedOption
+                ? "mt-4 max-h-12 opacity-100"
+                : "mt-0 max-h-0 opacity-0"
+            }
+          `}
+        >
           <button
             type="button"
             onClick={submitVote}
-            disabled={submitting}
+            disabled={!selectedOption || submitting}
             className="
-              mt-4 inline-flex min-h-10
+              inline-flex min-h-10
               items-center justify-center
               rounded-lg bg-blue-600
               px-5 py-2.5
@@ -336,7 +388,9 @@ export default function VotingSection({
               ? "Submitting..."
               : "Submit Vote"}
           </button>
-        )}
+        </div>
+      )}
+
 
       {/* Results loading state */}
       {resultsLoading && (
