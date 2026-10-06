@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 
 import { CATEGORY_ICONS } from "../../utils/pollConstants";
 import { getTimeRemaining } from "../../utils/pollHelpers";
+import VotingSection from "../voting/VotingSection";
 
 export default function PollCard({ poll }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -115,16 +116,14 @@ export default function PollCard({ poll }) {
           {timeRemaining}
         </span>
 
-        {/* Options */}
-        <div className="mt-3 flex w-full max-w-72 flex-col gap-2 sm:max-w-80">
-          {poll.options.map((option) => (
-            <div
-              key={option.id}
-              className="break-words rounded-full border border-border bg-surface px-3 py-2 text-xs leading-5 text-text-heading transition-colors duration-200 hover:border-slate-300 sm:px-4"
-            >
-              {option.text}
-            </div>
-          ))}
+        {/* Voting */}
+        <div className="w-full max-w-72 sm:max-w-80">
+          <VotingSection
+            pollId={poll.id}
+            options={poll.options}
+            status={poll.status}
+            resultsVisibility={poll.resultsVisibility}
+          />
         </div>
 
         {/* Vote count */}
