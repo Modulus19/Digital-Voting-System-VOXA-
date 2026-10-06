@@ -139,15 +139,35 @@ export default function VoteOption({
       type="button"
       disabled={disabled}
       onClick={() => onSelect(option.id)}
-      className={`flex w-full items-center gap-2.5 rounded-full border border-border bg-surface px-4 py-2 text-left text-xs text-text-heading transition ${
+      className={`flex w-full items-center gap-2.5 rounded-full border px-4 py-2 text-left text-xs text-text-heading transition ${
+        selected
+          ? "border-primary bg-slate-100"
+          : "border-border bg-surface"
+      } ${
         disabled
           ? "cursor-not-allowed opacity-60"
           : "cursor-pointer hover:border-primary hover:bg-slate-100"
       }`}
     >
-      <span className="h-4 w-4 shrink-0 rounded-full border border-slate-400 bg-white" />
+      <span
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border bg-white ${
+          selected
+            ? "border-primary"
+            : "border-slate-400"
+        }`}
+      >
+        {selected && (
+          <span className="h-2 w-2 rounded-full bg-primary" />
+        )}
+      </span>
 
-      <span className="font-medium">
+      <span
+        className={
+          selected
+            ? "font-semibold"
+            : "font-medium"
+        }
+      >
         {option.text}
       </span>
     </button>

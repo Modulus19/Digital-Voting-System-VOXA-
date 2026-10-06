@@ -29,14 +29,12 @@ export default function PollDetails() {
     setTotalVotes(resultsData?.totalVotes ?? null);
   }, []);
 
-  const loadPoll = async () => {
+  const loadPoll = useCallback(async () => {
     try {
-      setLoading(true);
-      setError("");
-
       const response = await api.get(`/polls/${id}`);
 
       setPoll(response.data.data);
+      setError("");
     } catch (error) {
       console.error(
         "Load poll details error:",
@@ -50,24 +48,63 @@ export default function PollDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    loadPoll();
+    let cancelled = false;
+
+    const fetchPoll = async () => {
+      try {
+        const response = await api.get(`/polls/${id}`);
+
+        if (!cancelled) {
+          setPoll(response.data.data);
+          setError("");
+        }
+      } catch (error) {
+        console.error(
+          "Load poll details error:",
+          error
+        );
+
+        if (!cancelled) {
+          setError(
+            error.response?.data?.message ||
+              "Unable to load this poll."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchPoll();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (loading) {
     return <Loading />;
   }
 
+  const handleRetry = () => {
+    setLoading(true);
+    loadPoll();
+  };
+
   if (error) {
     return (
       <Error
         message={error}
-        onRetry={loadPoll}
+        onRetry={handleRetry}
       />
     );
   }
+
 
   if (!poll) {
     return (
