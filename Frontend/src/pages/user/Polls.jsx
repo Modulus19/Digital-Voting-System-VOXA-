@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 
@@ -13,6 +13,7 @@ const POLLS_PER_PAGE = 5;
 
 export default function Polls() {
   const navigate = useNavigate();
+  const pollsTopRef = useRef(null);
 
   const [polls, setPolls] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -179,10 +180,21 @@ export default function Polls() {
     );
   }
 
+  function changePage(nextPage) {
+    setCurrentPage(nextPage);
+
+    pollsTopRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       {/* Header */}
-      <header className="mb-5 sm:mb-6">
+      <header 
+        ref={pollsTopRef}
+        className="mb-5 scroll-mt-18 sm:mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_250px] lg:gap-8">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -292,11 +304,7 @@ export default function Polls() {
                   disabled={
                     currentPage === 1
                   }
-                  onClick={() =>
-                    setCurrentPage(
-                      (page) => page - 1
-                    )
-                  }
+                  onClick={() => changePage(currentPage - 1)}
                   className="
                     min-w-0 flex-1 rounded-lg
                     border border-border
@@ -324,11 +332,7 @@ export default function Polls() {
                     currentPage ===
                     totalPages
                   }
-                  onClick={() =>
-                    setCurrentPage(
-                      (page) => page + 1
-                    )
-                  }
+                  onClick={() => changePage(currentPage + 1)}
                   className="
                     min-w-0 flex-1 rounded-lg
                     border border-border

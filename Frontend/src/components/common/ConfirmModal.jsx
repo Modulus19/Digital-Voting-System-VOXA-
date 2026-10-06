@@ -8,7 +8,15 @@ export default function ConfirmModal({
   message = "This action cannot be undone.",
   confirmText = "Confirm",
   cancelText = "Cancel",
+  variant = "primary",
 }) {
+
+  const confirmStyles = {
+    primary: "bg-blue-600 hover:bg-blue-700",
+    danger: "bg-red-500 hover:bg-red-600",
+    neutral: "bg-slate-700 hover:bg-slate-800",
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <p className="text-sm text-slate-600 mb-6">
@@ -27,7 +35,12 @@ export default function ConfirmModal({
         <button
           type="button"
           onClick={onConfirm}
-          className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600"
+          className={`
+            rounded-lg px-4 py-2
+            text-sm font-semibold text-white
+            transition-colors
+            ${confirmStyles[variant] ?? confirmStyles.primary}
+          `}
         >
           {confirmText}
         </button>

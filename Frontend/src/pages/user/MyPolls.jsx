@@ -568,6 +568,13 @@ export default function MyPolls() {
             ? "Please wait..."
             : confirmationContent.confirmText
         }
+        variant={
+          confirmAction?.type === "delete"
+            ? "danger"
+            : confirmAction?.type === "publish"
+            ? "primary"
+            : "neutral"
+        }
       />
     </div>
   );

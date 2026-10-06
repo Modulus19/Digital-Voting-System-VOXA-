@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 
 const categories = [
@@ -53,6 +53,15 @@ export default function PollForm({
       : ["", ""]
   );
 
+  const optionRefs = useRef([]);
+  const questionRef = useRef(null);
+  const categoryRef = useRef(null);
+  const closesAtRef = useRef(null);
+  const dateTimePickerRef = useRef(null);
+
+  const [draggedOptionIndex, setDraggedOptionIndex] =
+    useState(null);
+
   const [resultsVisibility, setResultsVisibility] =
     useState(
       initialValues.resultsVisibility ??
@@ -62,6 +71,21 @@ export default function PollForm({
   const [closesAt, setClosesAt] = useState(
     initialValues.closesAt ?? ""
   );
+
+  const [showDateTimePicker, setShowDateTimePicker] =
+    useState(false);
+
+  const [dateTimeStep, setDateTimeStep] =
+    useState("date");
+
+  const [selectedDate, setSelectedDate] =
+    useState(null);
+
+  const [selectedTime, setSelectedTime] =
+    useState("");
+
+  const [selectedPeriod, setSelectedPeriod] =
+    useState("PM");
 
   const [errors, setErrors] = useState({});
 
@@ -112,10 +136,16 @@ export default function PollForm({
   }, [isDirty, isSubmitting]);
 
   const addOption = () => {
+    const newIndex = options.length;
+
     setOptions((current) => [
       ...current,
       "",
     ]);
+
+    requestAnimationFrame(() => {
+      optionRefs.current[newIndex]?.focus();
+    });
   };
 
   const removeOption = (index) => {
@@ -129,6 +159,34 @@ export default function PollForm({
     );
   };
 
+  const moveOption = (fromIndex, toIndex) => {
+    if (
+      fromIndex === null ||
+      fromIndex === toIndex
+    ) {
+      return;
+    }
+
+    setOptions((current) => {
+      const reordered = [...current];
+
+      const [movedOption] = reordered.splice(
+        fromIndex,
+        1
+      );
+
+      reordered.splice(
+        toIndex,
+        0,
+        movedOption
+      );
+
+      return reordered;
+    });
+
+    setDraggedOptionIndex(toIndex);
+  };
+  
   const updateOption = (
     index,
     value
@@ -141,6 +199,43 @@ export default function PollForm({
             : option
       )
     );
+  };
+
+  const focusFirstInvalidField = (nextErrors) => {
+    let target = null;
+
+    if (nextErrors.question) {
+      target = questionRef.current;
+    } else if (nextErrors.category) {
+      target = categoryRef.current;
+    } else if (nextErrors.options) {
+      const firstEmptyOptionIndex =
+        options.findIndex(
+          (option) => !option.trim()
+        );
+
+      target =
+        optionRefs.current[
+          firstEmptyOptionIndex >= 0
+            ? firstEmptyOptionIndex
+            : 0
+        ];
+    } else if (nextErrors.closesAt) {
+      target = closesAtRef.current;
+    }
+
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      target.focus({
+        preventScroll: true,
+      });
+    });
   };
 
   const validateForm = () => {
@@ -156,12 +251,11 @@ export default function PollForm({
         "Please select a category.";
     }
 
-    if (
-      options.length < 2 ||
-      options.some(
-        (option) => !option.trim()
-      )
-    ) {
+    const filledOptions = options.filter(
+      (option) => option.trim()
+    );
+
+    if (filledOptions.length < 2) {
       nextErrors.options =
         "Enter at least two poll options.";
     }
@@ -178,17 +272,24 @@ export default function PollForm({
 
     setErrors(nextErrors);
 
-    return (
-      Object.keys(nextErrors).length === 0
-    );
+    const isValid =
+      Object.keys(nextErrors).length === 0;
+
+    if (!isValid) {
+      focusFirstInvalidField(nextErrors);
+    }
+
+    return isValid;
   };
 
   const buildPayload = () => ({
     question: question.trim(),
 
-    options: options.map((option) => ({
-      text: option.trim(),
-    })),
+    options: options
+      .filter((option) => option.trim())
+      .map((option) => ({
+        text: option.trim(),
+      })),
 
     resultsVisibility,
     category,
@@ -218,6 +319,29 @@ export default function PollForm({
     );
   };
 
+  useEffect(() => {
+    if (!showDateTimePicker) return;
+
+    const handleClickOutside = (event) => {
+      if (
+        dateTimePickerRef.current &&
+        !dateTimePickerRef.current.contains(event.target)
+      ) {
+        setShowDateTimePicker(false);
+        setDateTimeStep("date");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, [showDateTimePicker]);
+
   const handleCancelRequest = () => {
     if (!isDirty) {
       onCancel();
@@ -236,6 +360,96 @@ export default function PollForm({
   const confirmCancel = () => {
     setShowCancelModal(false);
     onCancel();
+  };
+
+  const [calendarMonth, setCalendarMonth] =
+    useState(() => new Date());
+
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const getCalendarDays = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+
+    return days;
+  };
+
+  const calendarDays = getCalendarDays(calendarMonth);
+
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setDateTimeStep("time");
+  };
+
+  const isSelectedTimeInPast = (time) => {
+    if (!selectedDate || !time) return false;
+
+    const now = new Date();
+
+    // Only apply this check when the selected date is today
+    if (selectedDate.toDateString() !== now.toDateString()) {
+      return false;
+    }
+
+    const [hours, minutes] = time.split(":").map(Number);
+
+    const selectedDateTime = new Date(selectedDate);
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+
+    return selectedDateTime <= now;
+};
+
+  const handleTimeSelect = (time) => {
+    if (!selectedDate) return;
+
+    if (isSelectedTimeInPast(time)) {
+      setErrors((current) => ({
+        ...current,
+        closesAt: "Please select a future time.",
+      }));
+      return;
+    }
+
+    const [hours, minutes] = time.split(":").map(Number);
+
+    const finalDate = new Date(selectedDate);
+    finalDate.setHours(hours, minutes, 0, 0);
+
+    setSelectedTime(time);
+    setClosesAt(finalDate.toISOString());
+
+    // Clear any previous date/time error
+    setErrors((current) => ({
+      ...current,
+      closesAt: "",
+    }));
+
+    setShowDateTimePicker(false);
+    setDateTimeStep("date");
+  };
+
+  const changeMonth = (amount) => {
+    setCalendarMonth(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() + amount,
+          1
+        )
+    );
   };
 
   return (
@@ -262,6 +476,7 @@ export default function PollForm({
               </label>
 
               <input
+                ref={questionRef}
                 type="text"
                 value={question}
                 onChange={(event) =>
@@ -300,6 +515,7 @@ export default function PollForm({
               </label>
 
               <select
+                ref={categoryRef}
                 value={category}
                 onChange={(event) =>
                   setCategory(
@@ -353,9 +569,68 @@ export default function PollForm({
                 (option, index) => (
                   <div
                     key={index}
-                    className="flex min-w-0 items-center gap-2 sm:gap-4"
+                    onDragEnter={() => {
+                      if (
+                        draggedOptionIndex !== null &&
+                        draggedOptionIndex !== index
+                      ) {
+                        moveOption(
+                          draggedOptionIndex,
+                          index
+                        );
+                      }
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setDraggedOptionIndex(null);
+                    }}
+                    className={`
+                      flex min-w-0 items-center gap-2
+                      rounded-lg
+                      transition-all duration-200
+                      sm:gap-4
+
+                      ${
+                        draggedOptionIndex === index
+                          ? "scale-[0.98] opacity-50 shadow-sm"
+                          : ""
+                      }
+                    `}
                   >
+
+                    <button
+                      type="button"
+                      draggable
+                      tabIndex={-1}
+                      aria-label={`Drag option ${index + 1}`}
+                      onDragStart={() => {
+                        setDraggedOptionIndex(index);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedOptionIndex(null);
+                      }}
+                      className="
+                        flex h-10 w-6 shrink-0
+                        cursor-grab items-center justify-center
+                        text-slate-400
+                        transition-colors
+                        hover:text-blue-600
+                        active:cursor-grabbing
+                      "
+                    >
+                      <Icon
+                        icon="mdi:drag-vertical"
+                        width={20}
+                      />
+                    </button>
+                    
                     <input
+                      ref={(element) => {
+                        optionRefs.current[index] = element;
+                      }}
                       type="text"
                       value={option}
                       onChange={(event) =>
@@ -364,9 +639,7 @@ export default function PollForm({
                           event.target.value
                         )
                       }
-                      placeholder={`Option ${
-                        index + 1
-                      }`}
+                      placeholder={`Option ${index + 1}`}
                       className="
                         min-w-0 flex-1
                         rounded-lg border
@@ -452,7 +725,7 @@ export default function PollForm({
               </span>
             </h2>
 
-            <div className="grid gap-6 sm:grid-cols-2 sm:gap-7">
+            <div className="grid items-center gap-6 sm:grid-cols-2 sm:gap-7">
               {/* Visibility */}
               <div className="min-w-0">
                 <label className="mb-2 block text-sm font-semibold text-slate-800">
@@ -497,42 +770,404 @@ export default function PollForm({
                 </select>
               </div>
 
-              {/* End date */}
-              <div className="min-w-0">
+              {/* End date & time */}
+              <div className="relative min-w-0">
                 <label className="mb-2 block text-sm font-semibold text-slate-800">
-                  End Date
+                  End Date & Time
                 </label>
 
                 <p className="mb-3 text-xs leading-5 text-slate-500">
-                  Set when your poll will end.
+                  Choose when your poll closes.
                 </p>
 
-                <input
-                  type="datetime-local"
-                  value={closesAt}
-                  onChange={(event) =>
-                    setClosesAt(
-                      event.target.value
-                    )
-                  }
-                  className="
-                    w-full min-w-0
-                    rounded-md border
-                    border-slate-200 bg-white
-                    px-3 py-2.5 text-sm
-                    outline-none
-                    transition-all duration-200
-                    focus:border-blue-500
-                    focus:ring-2
-                    focus:ring-blue-100
-                  "
-                />
+                <div
+                  ref={dateTimePickerRef}
+                  className="relative"
+                >
 
-                {errors.closesAt && (
-                  <p className="mt-1.5 text-xs text-red-500">
-                    {errors.closesAt}
-                  </p>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDateTimePicker((current) => !current);
+                      setDateTimeStep("date");
+                    }}
+                    className={`
+                      flex w-full items-center justify-between
+                      rounded-lg border bg-white
+                      px-3 py-2.5 text-left text-sm
+                      outline-none transition-all duration-200
+
+                      ${
+                        showDateTimePicker
+                          ? "border-blue-500 ring-2 ring-blue-100"
+                          : "border-slate-200 hover:border-slate-300"
+                      }
+                    `}
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <Icon
+                        icon="mdi:calendar-blank-outline"
+                        width={18}
+                        className="shrink-0 text-slate-400"
+                      />
+
+                      <span
+                        className={
+                          closesAt
+                            ? "truncate text-slate-800"
+                            : "text-slate-400"
+                        }
+                      >
+                        {closesAt
+                          ? new Date(closesAt).toLocaleString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              }
+                            )
+                          : "Select date and time"}
+                      </span>
+                    </span>
+
+                    <Icon
+                      icon="mdi:chevron-down"
+                      width={19}
+                      className={`shrink-0 text-slate-400 transition-transform duration-200 ${
+                        showDateTimePicker
+                          ? "rotate-180"
+                          : ""
+                      }`}
+                    />
+                  </button>
+
+                  {showDateTimePicker && (
+                    <div
+                      className="
+                        absolute bottom-full left-0 z-50 mb-0
+                        w-full max-w-[360px]
+                        overflow-hidden rounded-xl
+                        border border-slate-200 bg-white
+                        shadow-[0_18px_45px_rgba(15,23,42,0.14)]
+                      "
+                    >
+                      {dateTimeStep === "date" && (
+                        <div className="p-4">
+                          {/* Calendar header */}
+                          <div className="mb-4 flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => changeMonth(-1)}
+                              className="
+                                flex h-8 w-8 items-center justify-center
+                                rounded-lg text-slate-500
+                                transition hover:bg-slate-100 hover:text-slate-800
+                              "
+                            >
+                              <Icon icon="mdi:chevron-left" width={20} />
+                            </button>
+
+                            <p className="text-sm font-semibold text-slate-800">
+                              {calendarMonth.toLocaleDateString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                              })}
+                            </p>
+
+                            <button
+                              type="button"
+                              onClick={() => changeMonth(1)}
+                              className="
+                                flex h-8 w-8 items-center justify-center
+                                rounded-lg text-slate-500
+                                transition hover:bg-slate-100 hover:text-slate-800
+                              "
+                            >
+                              <Icon icon="mdi:chevron-right" width={20} />
+                            </button>
+                          </div>
+
+                          {/* Week days */}
+                          <div className="mb-1 grid grid-cols-7">
+                            {daysOfWeek.map((day) => (
+                              <div
+                                key={day}
+                                className="
+                                  flex h-8 items-center justify-center
+                                  text-[11px] font-medium text-slate-400
+                                "
+                              >
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Calendar days */}
+                          <div className="grid grid-cols-7 gap-y-1">
+                            {calendarDays.map((date, index) => {
+                              if (!date) {
+                                return <div key={`empty-${index}`} />;
+                              }
+
+                              const today = new Date();
+
+                              const isToday =
+                                date.toDateString() === today.toDateString();
+
+                              const isSelected =
+                                selectedDate &&
+                                date.toDateString() === selectedDate.toDateString();
+
+                              const isPast =
+                                date <
+                                new Date(
+                                  today.getFullYear(),
+                                  today.getMonth(),
+                                  today.getDate()
+                                );
+
+                              return (
+                                <button
+                                  key={date.toISOString()}
+                                  type="button"
+                                  disabled={isPast}
+                                  onClick={() => handleDateSelect(date)}
+                                  className={`
+                                    mx-auto flex h-9 w-9
+                                    items-center justify-center rounded-lg
+                                    text-sm transition
+
+                                    ${
+                                      isSelected
+                                        ? "bg-blue-600 font-semibold text-white"
+                                        : isToday
+                                        ? "bg-blue-50 font-semibold text-blue-600"
+                                        : isPast
+                                        ? "cursor-not-allowed text-slate-300"
+                                        : "text-slate-700 hover:bg-slate-100"
+                                    }
+                                  `}
+                                >
+                                  {date.getDate()}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {dateTimeStep === "time" && (
+                        <div className="p-4">
+                          <div className="mb-5 flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setDateTimeStep("date")}
+                              className="
+                                flex h-8 w-8 shrink-0 items-center justify-center
+                                rounded-lg text-slate-500
+                                transition hover:bg-slate-100 hover:text-slate-800
+                              "
+                            >
+                              <Icon icon="mdi:arrow-left" width={18} />
+                            </button>
+
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">
+                                Select time
+                              </p>
+
+                              <p className="mt-0.5 text-xs text-slate-400">
+                                {selectedDate?.toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            {/* Time controls */}
+                            <div className="grid grid-cols-[72px_auto_72px_76px] items-end gap-2">
+                              {/* Hour */}
+                              <div>
+                                <p className="mb-2 text-[11px] font-medium text-slate-400">
+                                  Hour
+                                </p>
+
+                                <select
+                                  value={selectedTime ? selectedTime.split(":")[0] : ""}
+                                  onChange={(e) => {
+                                    const hour = e.target.value;
+                                    const minute = selectedTime
+                                      ? selectedTime.split(":")[1]
+                                      : "00";
+
+                                    setSelectedTime(`${hour}:${minute}`);
+                                  }}
+                                  className="
+                                    h-11 w-full rounded-lg border border-slate-200
+                                    bg-white px-3 text-sm font-medium text-slate-700
+                                    outline-none transition
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+                                  "
+                                >
+                                  <option value="">--</option>
+
+                                  {Array.from({ length: 12 }, (_, index) => {
+                                    const hour = index + 1;
+
+                                    return (
+                                      <option key={hour} value={hour}>
+                                        {hour}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </div>
+
+                              <span className="mb-3 flex h-5 items-center justify-center text-lg font-semibold text-slate-400">
+                                :
+                              </span>
+
+                              {/* Minute */}
+                              <div>
+                                <p className="mb-2 text-[11px] font-medium text-slate-400">
+                                  Minute
+                                </p>
+
+                                <select
+                                  value={
+                                    selectedTime
+                                      ? selectedTime.split(":")[1]
+                                      : "00"
+                                  }
+                                  onChange={(e) => {
+                                    const hour = selectedTime
+                                      ? selectedTime.split(":")[0]
+                                      : "";
+
+                                    setSelectedTime(
+                                      `${hour}:${e.target.value}`
+                                    );
+                                  }}
+                                  className="
+                                    h-11 w-full rounded-lg border border-slate-200
+                                    bg-white pl-3 pr-2 text-sm font-medium text-slate-700
+                                    outline-none transition
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+                                  "
+                                >
+                                  {["00", "15", "30", "45"].map((minute) => (
+                                    <option key={minute} value={minute}>
+                                      {minute}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* AM / PM */}
+                              <div>
+                                <p className="mb-2 text-[11px] font-medium text-slate-400">
+                                  Period
+                                </p>
+
+                                <select
+                                  value={selectedPeriod}
+                                  onChange={(e) =>
+                                    setSelectedPeriod(e.target.value)
+                                  }
+                                  className="
+                                    h-11 w-full rounded-lg border border-slate-200
+                                    bg-white px-2 text-sm font-medium text-slate-700
+                                    outline-none transition
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+                                  "
+                                >
+                                  <option value="AM">AM</option>
+                                  <option value="PM">PM</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTime("");
+                                  setDateTimeStep("date");
+                                }}
+                                className="
+                                  text-xs font-medium text-slate-500
+                                  transition hover:text-slate-800
+                                "
+                              >
+                                Change date
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!selectedTime?.split(":")[0]}
+                                onClick={() => {
+                                  if (!selectedTime?.split(":")[0]) return;
+
+                                  const [hourString, minute] =
+                                    selectedTime.split(":");
+
+                                  const period = selectedPeriod;
+
+                                  let hour = Number(hourString);
+
+                                  if (period === "PM" && hour !== 12) {
+                                    hour += 12;
+                                  }
+
+                                  if (period === "AM" && hour === 12) {
+                                    hour = 0;
+                                  }
+
+                                  const time24 = `${String(hour).padStart(
+                                    2,
+                                    "0"
+                                  )}:${minute}`;
+
+                                  handleTimeSelect(time24);
+                                }}
+                                className="
+                                  flex items-center gap-1.5 rounded-lg
+                                  bg-blue-600 px-4 py-2.5
+                                  text-xs font-semibold text-white
+                                  transition
+                                  hover:bg-blue-700
+                                  disabled:cursor-not-allowed
+                                  disabled:bg-slate-200
+                                  disabled:text-slate-400
+                                "
+                              >
+                                Set end time
+
+                                <Icon
+                                  icon="mdi:check"
+                                  width={16}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {errors.closesAt && (
+                    <p className="mt-1.5 text-xs text-red-500">
+                      {errors.closesAt}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </section>
