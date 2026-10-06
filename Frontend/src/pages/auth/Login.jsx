@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { login as loginRequest } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/voxa-logo.png";
+import { Icon } from "@iconify/react";
 
 function Login() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ function Login() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -72,7 +74,15 @@ function Login() {
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
 
-        <p className="mt-2 text-sm text-gray-500">Login with email</p>
+        <div className="flex items-center gap-4 mt-5">
+          <div className="h-px flex-1 bg-gray-300"></div>
+
+          <span className="text-sm text-gray-500 whitespace-nowrap">
+            Login with email
+          </span>
+
+          <div className="h-px flex-1 bg-gray-300"></div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -98,7 +108,8 @@ function Login() {
         </div>
 
         {/* Password */}
-        <div className="mb-5">
+        {/* Password */}
+        <div>
           <label
             htmlFor="password"
             className="block text-sm font-semibold text-gray-800 mb-2"
@@ -106,16 +117,29 @@ function Login() {
             Password
           </label>
 
-          <input
-            id="password"
-            type="password"
-            name="password"
-            placeholder="e.g Ad123"
-            value={formData.password}
-            onChange={handleChange}
-            autoComplete="current-password"
-            className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm outline-none focus:border-blue-500"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="e.g Ad123"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+              className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 pr-10 text-sm outline-none focus:border-blue-500"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <Icon
+                icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
+                className="text-xl text-gray-500"
+              />
+            </button>
+          </div>
         </div>
 
         {/* Remember / Forgot password */}
@@ -129,7 +153,10 @@ function Login() {
             Keep me logged in
           </label>
 
-          <Link to="/forgot-password" className="text-blue-600 hover:underline">
+          <Link
+            to="/forgot-password"
+            className="font-medium text-primary hover:underline"
+          >
             Forgot password?
           </Link>
         </div>
@@ -139,7 +166,7 @@ function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-text-inverse transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Logging in..." : "Log In"}
         </button>
@@ -148,7 +175,7 @@ function Login() {
           Don't have an account?{" "}
           <Link
             to="/register"
-            className="font-medium text-blue-600 hover:underline"
+            className="font-medium text-primary hover:underline"
           >
             Sign Up
           </Link>

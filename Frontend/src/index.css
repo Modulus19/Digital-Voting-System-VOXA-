@@ -18,3 +18,26 @@
   --color-text-subtle: #94A3B8;  /* Muted text on dark backgrounds (footer links) */
   --color-text-inverse: #FFFFFF; /* Text on dark or colored backgrounds */
 }
+
+:where(
+  a,
+  button,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus {
+  outline: none;
+}
+
+:where(
+  a,
+  button,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+}

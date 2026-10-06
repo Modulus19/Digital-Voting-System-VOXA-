@@ -6,6 +6,7 @@ import userRoutes from "./Routes/userRoutes.js";
 import pollRoutes from "./Routes/pollRoutes.js";
 import voteRoutes from "./Routes/voteRoutes.js";
 import resultRoutes from "./Routes/resultRoutes.js";
+import adminRoutes from "./Routes/adminRoutes.js";
 
 const app = express();
 
@@ -39,5 +40,6 @@ app.use("/api/auth", userRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/api", voteRoutes);
 app.use("/api", resultRoutes);
+app.use("/api/admin", adminRoutes);
 
 export default app;

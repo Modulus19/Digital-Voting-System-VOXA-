@@ -1,0 +1,410 @@
+import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
+import api from "../../services/api";
+
+import VoteOption from "./VoteOption";
+
+/**
+ * Find the current user's vote for a specific poll.
+ * Handles both populated poll objects and plain poll IDs.
+ */
+function findVoteForPoll(votes, pollId) {
+  return (
+    votes.find((vote) => {
+      const votePollId =
+        typeof vote.poll === "object"
+          ? vote.poll?.id || vote.poll?._id
+          : vote.poll;
+
+      return String(votePollId) === String(pollId);
+    }) || null
+  );
+}
+
+export default function VotingSection({
+  pollId,
+  options = [],
+  status,
+  resultsVisibility,
+  onVoteSubmitted,
+  onResultsLoaded,
+}) {
+  const [myVote, setMyVote] = useState(null);
+  const [results, setResults] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [resultsLoading, setResultsLoading] = useState(false);
+
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const alreadyVoted = Boolean(myVote);
+  const pollIsOpen = status === "published";
+  const showResults = Boolean(results);
+
+  /**
+   * ID of the option selected by the current user.
+   */
+  const selectedVoteId =
+    myVote?.selectedOption?.id ||
+    myVote?.selectedOption?._id ||
+    myVote?.selectedOption ||
+    null;
+
+  /**
+   * Get the result belonging to an option.
+   */
+  const getResultForOption = (optionId) => {
+    if (!results?.results) return null;
+
+    return (
+      results.results.find(
+        (result) =>
+          String(result.optionId) === String(optionId)
+      ) || null
+    );
+  };
+
+  /**
+   * Check whether the current user has already
+   * voted on this poll.
+   */
+  useEffect(() => {
+    if (!pollId) return;
+
+    let cancelled = false;
+
+    const fetchMyVote = async () => {
+      try {
+        const response = await api.get(
+          "/votes/history"
+        );
+
+        const votes =
+          response.data.data.votes || [];
+
+        const existingVote = findVoteForPoll(
+          votes,
+          pollId
+        );
+
+        if (!cancelled) {
+          setMyVote(existingVote);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Load vote history error:",
+            error
+          );
+        }
+      }
+    };
+
+    fetchMyVote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pollId]);
+
+  /**
+   * Load results only when the visibility rules
+   * allow the current user to see them.
+   */
+  useEffect(() => {
+    if (!pollId) return;
+
+    if (resultsVisibility === "admin_only") {
+      return;
+    }
+
+    if (
+      resultsVisibility === "after_close" &&
+      status !== "closed"
+    ) {
+      return;
+    }
+
+    if (
+      resultsVisibility === "after_vote" &&
+      !myVote
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchResults = async () => {
+      try {
+        setResultsLoading(true);
+        setErrorMessage("");
+
+        const response = await api.get(
+          `/polls/${pollId}/results`
+        );
+
+        if (!cancelled) {
+          const resultsData = response.data.data;
+
+          setResults(resultsData);
+          onResultsLoaded?.(resultsData);
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        const statusCode = error.response?.status;
+        const message =
+          error.response?.data?.message;
+
+        if (statusCode === 403) {
+          setResults(null);
+        } else if (statusCode === 401) {
+          setErrorMessage(
+            "Please log in to view poll results."
+          );
+        } else {
+          setErrorMessage(
+            message ||
+              "Unable to load poll results."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setResultsLoading(false);
+        }
+      }
+    };
+
+    fetchResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    pollId,
+    resultsVisibility,
+    status,
+    myVote,
+    onResultsLoaded
+  ]);
+
+  /**
+   * Submit the currently selected option.
+   * Selection remains changeable until submission.
+  */
+  const submitVote = async () => {
+    if (
+      !selectedOption ||
+      submitting ||
+      alreadyVoted ||
+      !pollIsOpen
+    ) {
+      return;
+    }
+
+    const optionId = selectedOption;
+
+    try {
+      setSubmitting(true);
+      setErrorMessage("");
+
+      const response = await api.post(
+        `/polls/${pollId}/vote`,
+        {
+          selectedOption: optionId,
+        }
+      );
+
+      setMyVote(response.data.data.vote);
+
+      onVoteSubmitted?.();
+    } catch (error) {
+      console.error("Submit vote error:", error);
+
+      const statusCode = error.response?.status;
+      const message =
+        error.response?.data?.message;
+
+      /**
+       * The server already has a vote from this
+       * user. Synchronize the UI with that vote.
+       */
+      if (statusCode === 409) {
+        try {
+          const response = await api.get(
+            "/votes/history"
+          );
+
+          const votes =
+            response.data.data.votes || [];
+
+          const existingVote = findVoteForPoll(
+            votes,
+            pollId
+          );
+
+          setMyVote(existingVote);
+        } catch (historyError) {
+          console.error(
+            "Load vote history error:",
+            historyError
+          );
+
+          setErrorMessage(
+            "Unable to load your existing vote."
+          );
+        }
+      } else if (statusCode === 400) {
+        setErrorMessage(
+          message ||
+            "Your vote could not be submitted."
+        );
+      } else if (statusCode === 401) {
+        setErrorMessage(
+          "Please log in to vote."
+        );
+      } else {
+        setErrorMessage(
+          message ||
+            "Something went wrong while submitting your vote."
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 w-full">
+      {/* Error message */}
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Voting options / results */}
+      <div className="space-y-3">
+        {options.map((option) => {
+          const result = getResultForOption(option.id);
+
+          const isSelected = alreadyVoted
+            ? String(selectedVoteId) === String(option.id)
+            : String(selectedOption) === String(option.id);
+
+          return (
+            <VoteOption
+              key={option.id}
+              option={option}
+              selected={isSelected}
+              disabled={
+                !pollIsOpen ||
+                alreadyVoted ||
+                submitting
+              }
+              onSelect={(optionId) => {
+                setSelectedOption((current) =>
+                  String(current) === String(optionId)
+                    ? null
+                    : optionId
+                );
+              }}
+              result={result}
+              showResults={showResults}
+            />
+          );
+        })}
+      </div>
+
+      {/* Vote submitted — results available after poll closes */}
+      {alreadyVoted &&
+        !showResults &&
+        resultsVisibility === "after_close" && (
+          <div className="mt-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <Icon
+                icon="mdi:check-circle"
+                width={16}
+              />
+              Vote submitted
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Results will be available when this poll closes.
+            </p>
+          </div>
+        )}
+
+      {/* Vote submitted — results are private */}
+      {alreadyVoted &&
+        !showResults &&
+        resultsVisibility === "admin_only" && (
+          <div className="mt-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <Icon
+                icon="mdi:check-circle"
+                width={16}
+              />
+              Vote submitted
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Results for this poll are private.
+            </p>
+          </div>
+        )}
+
+      {/* Submit vote */}
+      {pollIsOpen && !alreadyVoted && (
+        <div
+          className={`
+            overflow-hidden transition-all duration-300 ease-out
+            ${
+              selectedOption
+                ? "mt-4 max-h-12 opacity-100"
+                : "mt-0 max-h-0 opacity-0"
+            }
+          `}
+        >
+          <button
+            type="button"
+            onClick={submitVote}
+            disabled={!selectedOption || submitting}
+            className="
+              inline-flex min-h-10
+              items-center justify-center
+              rounded-lg bg-blue-600
+              px-5 py-2.5
+              text-sm font-semibold text-white
+              transition-all duration-200
+              hover:bg-blue-700
+              active:scale-[0.98]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+            {submitting
+              ? "Submitting..."
+              : "Submit Vote"}
+          </button>
+        </div>
+      )}
+
+
+      {/* Results loading state */}
+      {resultsLoading && (
+        <p className="mt-3 text-xs text-text-muted">
+          Loading results...
+        </p>
+      )}
+
+      {/* Closed poll */}
+      {!pollIsOpen && !showResults && (
+        <p className="mt-4 text-sm text-text-muted">
+          Voting is closed for this poll.
+        </p>
+      )}
+    </div>
+  );
+}
