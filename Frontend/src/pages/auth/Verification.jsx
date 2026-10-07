@@ -148,7 +148,7 @@ function Verification() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 py-3 text-[13px] font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+          className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-text-inverse transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Verifying..." : "Verify Code"}
         </button>
@@ -172,7 +172,7 @@ function Verification() {
 
       <p className="mt-2 text-center text-[12px] text-gray-500">
         Remember your password?{" "}
-        <Link to="/login" className="font-medium text-blue-600 hover:underline">
+        <Link to="/login" className="font-medium text-primary hover:underline">
           Log in
         </Link>
       </p>

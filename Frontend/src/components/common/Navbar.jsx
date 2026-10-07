@@ -1,4 +1,3 @@
-// src/components/common/Navbar.jsx
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
@@ -28,31 +27,43 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full bg-white border-b border-gray-200">
-      <div className="h-20 flex items-center justify-between px-4 sm:px-8 lg:px-16">
-        
+    <nav className="w-full border-b border-gray-100 bg-white">
+      {/* Navbar */}
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
+
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
-          <img src={logo} alt="Voxa" className="h-8" />
+        <Link
+          to={paths.home}
+          onClick={closeMenu}
+          className="flex shrink-0 items-center"
+        >
+          <img
+            src={logo}
+            alt="Voxa"
+            className="h-10 w-auto sm:h-11"
+          />
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-5 lg:gap-8">
-          <Link to={paths.home}
-            className={`text-sm font-semibold ${
+        <div className="hidden items-center gap-6 md:flex lg:gap-8">
+
+          <Link
+            to={paths.home}
+            className={`text-sm font-semibold transition ${
               isActive("/")
                 ? "text-[#3B82F6]"
-                : "text-slate-500"
+                : "text-slate-500 hover:text-[#3B82F6]"
             }`}
           >
             Home
           </Link>
 
-          <Link to={paths.about}
-            className={`text-sm font-semibold ${
+          <Link
+            to={paths.about}
+            className={`text-sm font-semibold transition ${
               isActive("/about")
-                ? "text-purple-500"
-                : "text-slate-500"
+                ? "text-[#3B82F6]"
+                : "text-slate-500 hover:text-[#3B82F6]"
             }`}
           >
             About
@@ -60,21 +71,23 @@ export default function Navbar() {
 
           {isAuthenticated && (
             <>
-              <Link to={paths.user.polls}
-                className={`text-sm font-semibold ${
+              <Link
+                to={paths.user.polls}
+                className={`text-sm font-semibold transition ${
                   isActive("/polls")
-                    ? "text-purple-500"
-                    : "text-slate-500"
+                    ? "text-[#3B82F6]"
+                    : "text-slate-500 hover:text-[#3B82F6]"
                 }`}
               >
                 Polls
               </Link>
 
-             <Link to={paths.user.myVotes}
-                className={`text-sm font-semibold ${
+              <Link
+                to={paths.user.myVotes}
+                className={`text-sm font-semibold transition ${
                   isActive("/my-votes")
-                    ? "text-purple-500"
-                    : "text-slate-500"
+                    ? "text-[#3B82F6]"
+                    : "text-slate-500 hover:text-[#3B82F6]"
                 }`}
               >
                 My Votes
@@ -82,25 +95,33 @@ export default function Navbar() {
             </>
           )}
 
+          {/* User / Auth Buttons */}
           {isAuthenticated ? (
-            <Link to={paths.user.profile}>
-              <div className="w-9 h-9 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-semibold">
+            <Link
+              to={paths.user.profile}
+              className="ml-1"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3B82F6] text-sm font-semibold text-white">
                 {initials}
               </div>
             </Link>
           ) : (
-            <div className="flex items-center gap-4">
-              <Link to={paths.auth.login}
-                className="px-5 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-slate-900"
+            <div className="ml-1 flex items-center gap-3">
+
+              <Link
+                to={paths.auth.login}
+                className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-semibold text-[#0F172A] transition hover:border-[#3B82F6] hover:text-[#3B82F6]"
               >
                 Log In
               </Link>
 
-              <Link to={paths.auth.register}
-                className="px-5 py-2.5 rounded-lg bg-blue-500 text-white text-sm font-semibold"
+              <Link
+                to={paths.auth.register}
+                className="rounded-lg bg-[#3B82F6] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
               >
                 Sign Up
               </Link>
+
             </div>
           )}
         </div>
@@ -109,107 +130,118 @@ export default function Navbar() {
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden text-slate-700"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition hover:bg-gray-100 md:hidden"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
         >
           <Icon
             icon={menuOpen ? "mdi:close" : "mdi:menu"}
-            width="28"
+            width="25"
           />
         </button>
+
       </div>
 
       {/* Mobile Navigation */}
       {menuOpen && (
-        <div className="md:hidden border-t border-gray-200 px-4 py-5">
-          <div className="flex flex-col gap-4">
+        <div className="border-t border-gray-100 bg-white md:hidden">
+          <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
 
-            <Link
-              to="/"
-              onClick={closeMenu}
-              className={`text-sm font-semibold ${
-                isActive(paths.home)
-                  ? "text-[#3B82F6]"
-                  : "text-slate-500"
-              }`}
-            >
-              Home
-            </Link>
+            <div className="flex flex-col gap-1">
 
-            <Link
-              to="/about"
-              onClick={closeMenu}
-              className={`text-sm font-semibold ${
-                isActive(paths.about)
-                  ? "text-purple-500"
-                  : "text-slate-500"
-              }`}
-            >
-              About
-            </Link>
+              {/* Home */}
+              <Link
+                to={paths.home}
+                onClick={closeMenu}
+                className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                  isActive("/")
+                    ? "bg-blue-50 text-[#3B82F6]"
+                    : "text-slate-600 hover:bg-gray-50"
+                }`}
+              >
+                Home
+              </Link>
 
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/polls"
-                  onClick={closeMenu}
-                  className={`text-sm font-semibold ${
-                    isActive(paths.user.polls)
-                      ? "text-purple-500"
-                      : "text-slate-500"
-                  }`}
-                >
-                  Polls
-                </Link>
+              {/* About */}
+              <Link
+                to={paths.about}
+                onClick={closeMenu}
+                className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                  isActive("/about")
+                    ? "bg-blue-50 text-[#3B82F6]"
+                    : "text-slate-600 hover:bg-gray-50"
+                }`}
+              >
+                About
+              </Link>
 
-                <Link
-                  to="/my-votes"
-                  onClick={closeMenu}
-                  className={`text-sm font-semibold ${
-                    isActive(paths.user.myVotes)
-                      ? "text-purple-500"
-                      : "text-slate-500"
-                  }`}
-                >
-                  My Votes
-                </Link>
+              {/* Authenticated Links */}
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to={paths.user.polls}
+                    onClick={closeMenu}
+                    className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                      isActive("/polls")
+                        ? "bg-blue-50 text-[#3B82F6]"
+                        : "text-slate-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    Polls
+                  </Link>
 
-                <Link
-                  to="/profile"
-                  onClick={closeMenu}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-9 h-9 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-semibold">
-                    {initials}
-                  </div>
+                  <Link
+                    to={paths.user.myVotes}
+                    onClick={closeMenu}
+                    className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                      isActive("/my-votes")
+                        ? "bg-blue-50 text-[#3B82F6]"
+                        : "text-slate-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    My Votes
+                  </Link>
 
-                  <span className="text-sm font-semibold text-slate-700">
-                    Profile
-                  </span>
-                </Link>
-              </>
-            )}
+                  {/* Profile */}
+                  <Link
+                    to={paths.user.profile}
+                    onClick={closeMenu}
+                    className="mt-2 flex items-center gap-3 border-t border-gray-100 px-3 pt-4"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3B82F6] text-sm font-semibold text-white">
+                      {initials}
+                    </div>
 
-            {!isAuthenticated && (
-              <div className="flex flex-col gap-3 pt-2">
-                <Link
-                  to="/login"
-                  onClick={closeMenu}
-                  className="w-full text-center px-5 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-slate-900"
-                >
-                  Log In
-                </Link>
+                    <span className="text-sm font-semibold text-slate-700">
+                      Profile
+                    </span>
+                  </Link>
+                </>
+              )}
 
-                <Link
-                  to="/register"
-                  onClick={closeMenu}
-                  className="w-full text-center px-5 py-2.5 rounded-lg bg-blue-500 text-white text-sm font-semibold"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
+              {/* Logged Out */}
+              {!isAuthenticated && (
+                <div className="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-4">
 
+                  <Link
+                    to={paths.auth.login}
+                    onClick={closeMenu}
+                    className="w-full rounded-lg border border-gray-200 px-5 py-3 text-center text-sm font-semibold text-[#0F172A] transition hover:border-[#3B82F6] hover:text-[#3B82F6]"
+                  >
+                    Log In
+                  </Link>
+
+                  <Link
+                    to={paths.auth.register}
+                    onClick={closeMenu}
+                    className="w-full rounded-lg bg-[#3B82F6] px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    Sign Up
+                  </Link>
+
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}

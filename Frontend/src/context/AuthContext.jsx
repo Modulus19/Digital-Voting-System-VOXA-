@@ -17,10 +17,7 @@ export function AuthProvider({ children }) {
     }
 
     getCurrentUser()
-      .then((res) => {
-        console.log("CURRENT USER:", res.data.user);
-        setUser(res.data.user);
-  })
+      .then((res) => setUser(res.data.user))
       .catch(() => {
         localStorage.removeItem("accessToken");
       })
