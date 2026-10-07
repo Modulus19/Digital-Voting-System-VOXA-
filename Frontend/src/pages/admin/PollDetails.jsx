@@ -12,7 +12,9 @@ const AdminPollDetails = () => {
   const [totalVotes, setTotalVotes] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [resultsLoading, setResultsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [resultsError, setResultsError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchPoll = async () => {
@@ -20,30 +22,57 @@ const AdminPollDetails = () => {
       setLoading(true);
       setError("");
 
-      const [pollResponse, resultsResponse] = await Promise.all([
-        api.get(`/polls/${id}`),
-        api.get(`/polls/${id}/results`),
-      ]);
+      // Load poll details separately
+      const pollResponse = await api.get(`/polls/${id}`);
 
       const pollData =
-        pollResponse.data.data?.poll ||
-        pollResponse.data.data;
-
-      const resultData = resultsResponse.data.data;
+        pollResponse.data?.data?.poll ||
+        pollResponse.data?.data;
 
       setPoll(pollData);
-      setResults(resultData?.results || []);
-      setTotalVotes(resultData?.totalVotes || 0);
     } catch (error) {
       console.error("Failed to load poll:", error);
-      setError("Unable to load poll details.");
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load poll details."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchResults = async () => {
+    try {
+      setResultsLoading(true);
+      setResultsError("");
+
+      const resultsResponse = await api.get(
+        `/polls/${id}/results`
+      );
+
+      const resultData = resultsResponse.data?.data;
+
+      setResults(resultData?.results || []);
+      setTotalVotes(resultData?.totalVotes || 0);
+    } catch (error) {
+      console.error("Failed to load poll results:", error);
+
+      setResults([]);
+      setTotalVotes(0);
+
+      setResultsError(
+        error.response?.data?.message ||
+          "Results are currently unavailable."
+      );
+    } finally {
+      setResultsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPoll();
+    fetchResults();
   }, [id]);
 
   // Publish poll
@@ -112,7 +141,6 @@ const AdminPollDetails = () => {
     }
   };
 
-  // Format category
   const formatCategory = (category) => {
     if (!category) return "Uncategorized";
 
@@ -122,7 +150,6 @@ const AdminPollDetails = () => {
     );
   };
 
-  // Format status
   const formatStatus = (status) => {
     if (!status) return "Unknown";
 
@@ -132,7 +159,6 @@ const AdminPollDetails = () => {
     );
   };
 
-  // Format date
   const formatDate = (date) => {
     if (!date) return "—";
 
@@ -143,7 +169,6 @@ const AdminPollDetails = () => {
     });
   };
 
-  // Status badge styling
   const getStatusStyle = (status) => {
     if (status === "published") {
       return "bg-green-50 text-green-600";
@@ -223,7 +248,6 @@ const AdminPollDetails = () => {
         {/* Poll title */}
         <div>
           <div className="mb-3 flex items-center gap-3">
-
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
               <Icon icon="mdi:poll" width="23" />
             </div>
@@ -257,11 +281,7 @@ const AdminPollDetails = () => {
               disabled={actionLoading}
               className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Icon
-                icon="mdi:publish"
-                width="19"
-              />
-
+              <Icon icon="mdi:publish" width="19" />
               Publish
             </button>
           )}
@@ -274,11 +294,7 @@ const AdminPollDetails = () => {
               disabled={actionLoading}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Icon
-                icon="mdi:lock-outline"
-                width="19"
-              />
-
+              <Icon icon="mdi:lock-outline" width="19" />
               Close Poll
             </button>
           )}
@@ -290,11 +306,7 @@ const AdminPollDetails = () => {
             disabled={actionLoading}
             className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Icon
-              icon="mdi:delete-outline"
-              width="19"
-            />
-
+            <Icon icon="mdi:delete-outline" width="19" />
             Delete
           </button>
         </div>
@@ -309,16 +321,16 @@ const AdminPollDetails = () => {
             Total Votes
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            {totalVotes}
-          </p>
+          {resultsLoading ? (
+            <div className="mt-2 h-9 w-16 animate-pulse rounded bg-gray-100" />
+          ) : (
+            <p className="mt-2 text-3xl font-bold text-gray-900">
+              {resultsError ? "—" : totalVotes}
+            </p>
+          )}
 
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-            <Icon
-              icon="mdi:vote-outline"
-              width="18"
-            />
-
+            <Icon icon="mdi:vote-outline" width="18" />
             Votes submitted
           </div>
         </div>
@@ -338,7 +350,6 @@ const AdminPollDetails = () => {
               icon="mdi:format-list-bulleted"
               width="18"
             />
-
             Available choices
           </div>
         </div>
@@ -354,11 +365,7 @@ const AdminPollDetails = () => {
           </p>
 
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-            <Icon
-              icon="mdi:tag-outline"
-              width="18"
-            />
-
+            <Icon icon="mdi:tag-outline" width="18" />
             Poll category
           </div>
         </div>
@@ -379,7 +386,6 @@ const AdminPollDetails = () => {
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
-          {/* Category */}
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
               Category
@@ -390,7 +396,6 @@ const AdminPollDetails = () => {
             </p>
           </div>
 
-          {/* Status */}
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
               Status
@@ -401,7 +406,6 @@ const AdminPollDetails = () => {
             </p>
           </div>
 
-          {/* Results Visibility */}
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
               Results Visibility
@@ -412,7 +416,6 @@ const AdminPollDetails = () => {
             </p>
           </div>
 
-          {/* Closing Date */}
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
               Closes At
@@ -446,14 +449,43 @@ const AdminPollDetails = () => {
           </p>
         </div>
 
-        <div className="space-y-5">
+        {resultsLoading ? (
+          <div className="flex min-h-[180px] items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Icon
+                icon="mdi:loading"
+                width="28"
+                className="animate-spin text-[#3B82F6]"
+              />
 
-          {results.length > 0 ? (
-            results.map((result) => (
+              <p className="text-sm text-gray-500">
+                Loading results...
+              </p>
+            </div>
+          </div>
+        ) : resultsError ? (
+          <div className="rounded-lg bg-gray-50 px-6 py-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+              <Icon
+                icon="mdi:chart-bar-off"
+                width="24"
+                className="text-gray-400"
+              />
+            </div>
+
+            <p className="text-sm font-medium text-gray-900">
+              Results unavailable
+            </p>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {resultsError}
+            </p>
+          </div>
+        ) : results.length > 0 ? (
+          <div className="space-y-5">
+            {results.map((result) => (
               <div key={result.optionId}>
-
                 <div className="mb-2 flex items-center justify-between gap-4">
-
                   <span className="text-sm font-medium text-gray-800">
                     {result.option}
                   </span>
@@ -467,7 +499,6 @@ const AdminPollDetails = () => {
                   </span>
                 </div>
 
-                {/* Progress bar */}
                 <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
                   <div
                     className="h-full rounded-full bg-[#3B82F6] transition-all"
@@ -477,28 +508,27 @@ const AdminPollDetails = () => {
                   />
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="py-10 text-center">
-
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                <Icon
-                  icon="mdi:chart-bar"
-                  width="24"
-                  className="text-gray-400"
-                />
-              </div>
-
-              <p className="text-sm font-medium text-gray-900">
-                No results yet
-              </p>
-
-              <p className="mt-1 text-sm text-gray-500">
-                This poll has not received any votes.
-              </p>
+            ))}
+          </div>
+        ) : (
+          <div className="py-10 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+              <Icon
+                icon="mdi:chart-bar"
+                width="24"
+                className="text-gray-400"
+              />
             </div>
-          )}
-        </div>
+
+            <p className="text-sm font-medium text-gray-900">
+              No results yet
+            </p>
+
+            <p className="mt-1 text-sm text-gray-500">
+              This poll has not received any votes.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

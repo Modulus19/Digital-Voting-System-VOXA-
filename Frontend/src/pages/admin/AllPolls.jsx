@@ -7,7 +7,8 @@ const AllPolls = () => {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [statusFilter, setStatusFilter] =
+    useState("All Status");
   const [categoryFilter, setCategoryFilter] =
     useState("All Categories");
 
@@ -40,37 +41,21 @@ const AllPolls = () => {
         response.data.data ||
         [];
 
-      // Get vote count for every poll
-      const pollsWithVotes = await Promise.all(
-        fetchedPolls.map(async (poll) => {
-          try {
-            const result = await api.get(
-              `/polls/${poll.id}/results`
-            );
-
-            return {
-              ...poll,
-              totalVotes:
-                result.data.data?.totalVotes ?? 0,
-            };
-          } catch (error) {
-            console.error(
-              `Failed to fetch votes for poll ${poll.id}:`,
-              error
-            );
-
-            return {
-              ...poll,
-              totalVotes: 0,
-            };
-          }
-        })
+      setPolls(
+        Array.isArray(fetchedPolls)
+          ? fetchedPolls
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to fetch polls:",
+        error
       );
 
-      setPolls(pollsWithVotes);
-    } catch (error) {
-      console.error("Failed to fetch polls:", error);
-      setError("Unable to load polls.");
+      setError(
+        error.response?.data?.message ||
+          "Unable to load polls."
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +89,10 @@ const AllPolls = () => {
 
       setOpenMenu(null);
     } catch (error) {
-      console.error("Failed to delete poll:", error);
+      console.error(
+        "Failed to delete poll:",
+        error
+      );
 
       alert(
         error.response?.data?.message ||
@@ -255,6 +243,34 @@ const AllPolls = () => {
   };
 
   // =========================
+  // GET CREATOR NAME
+  // =========================
+
+  const getCreatorName = (poll) => {
+    return (
+      poll.creator?.username ||
+      poll.creator?.name ||
+      poll.createdBy?.username ||
+      poll.createdBy?.name ||
+      poll.username ||
+      "User"
+    );
+  };
+
+  // =========================
+  // GET VOTE COUNT
+  // =========================
+
+  const getVoteCount = (poll) => {
+    return (
+      poll.totalVotes ??
+      poll.votesCount ??
+      poll.voteCount ??
+      "—"
+    );
+  };
+
+  // =========================
   // STATUS STYLE
   // =========================
 
@@ -294,7 +310,7 @@ const AllPolls = () => {
         </div>
 
         <Link
-          to="/create-poll"
+          to="/polls/create"
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563EB]"
         >
           <Icon
@@ -352,27 +368,21 @@ const AllPolls = () => {
             className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
           >
             <option>All Categories</option>
-
             <option value="Technology">
               Technology
             </option>
-
             <option value="Education">
               Education
             </option>
-
             <option value="Politics">
               Politics
             </option>
-
             <option value="Food">
               Food
             </option>
-
             <option value="Sports">
               Sports
             </option>
-
             <option value="Lifestyle">
               Lifestyle
             </option>
@@ -382,13 +392,23 @@ const AllPolls = () => {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-          <Icon
-            icon="mdi:alert-circle-outline"
-            width="22"
-          />
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          <div className="flex items-center gap-3">
+            <Icon
+              icon="mdi:alert-circle-outline"
+              width="22"
+            />
 
-          {error}
+            {error}
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchPolls}
+            className="font-medium text-red-700 hover:underline"
+          >
+            Try again
+          </button>
         </div>
       )}
 
@@ -469,7 +489,6 @@ const AllPolls = () => {
                           </div>
 
                           <div className="max-w-[280px]">
-
                             <p className="truncate text-sm font-medium text-gray-900">
                               {poll.question}
                             </p>
@@ -485,7 +504,7 @@ const AllPolls = () => {
                       {/* Creator */}
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-500">
-                          User
+                          {getCreatorName(poll)}
                         </span>
                       </td>
 
@@ -501,7 +520,7 @@ const AllPolls = () => {
                       {/* Votes */}
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-700">
-                          {poll.totalVotes}
+                          {getVoteCount(poll)}
                         </span>
                       </td>
 
@@ -529,7 +548,6 @@ const AllPolls = () => {
 
                       {/* Actions */}
                       <td className="relative px-6 py-4 text-right">
-
                         <button
                           type="button"
                           disabled={
@@ -576,7 +594,6 @@ const AllPolls = () => {
                                 icon="mdi:eye-outline"
                                 width="18"
                               />
-
                               View
                             </Link>
 
@@ -596,7 +613,6 @@ const AllPolls = () => {
                                   icon="mdi:publish"
                                   width="18"
                                 />
-
                                 Publish
                               </button>
                             )}
@@ -617,7 +633,6 @@ const AllPolls = () => {
                                   icon="mdi:lock-outline"
                                   width="18"
                                 />
-
                                 Close
                               </button>
                             )}
@@ -638,7 +653,6 @@ const AllPolls = () => {
                                 icon="mdi:pencil-outline"
                                 width="18"
                               />
-
                               Edit
                             </button>
 
@@ -656,7 +670,6 @@ const AllPolls = () => {
                                 icon="mdi:delete-outline"
                                 width="18"
                               />
-
                               Delete
                             </button>
                           </div>
@@ -665,7 +678,6 @@ const AllPolls = () => {
                     </tr>
                   ))
                 ) : (
-                  /* Empty state */
                   <tr>
                     <td
                       colSpan="7"
@@ -713,7 +725,6 @@ const AllPolls = () => {
             </p>
 
             <div className="flex items-center gap-2">
-
               <button
                 type="button"
                 disabled
@@ -739,7 +750,6 @@ const AllPolls = () => {
                   width="20"
                 />
               </button>
-
             </div>
           </div>
         </div>

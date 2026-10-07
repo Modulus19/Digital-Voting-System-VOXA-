@@ -1,81 +1,97 @@
 import { useEffect, useState } from "react";
-import { Icon } from "@iconify/react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 
-const AdminEditPoll = () => {
+const categories = [
+  "Technology",
+  "Education",
+  "Politics",
+  "Food",
+  "Sports",
+  "Lifestyle",
+];
+
+export default function AdminEditPoll() {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [question, setQuestion] = useState("");
   const [category, setCategory] = useState("");
   const [closesAt, setClosesAt] = useState("");
   const [options, setOptions] = useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  // =========================
-  // FETCH POLL
-  // =========================
-
   useEffect(() => {
-    const fetchPoll = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await api.get(`/polls/${id}`);
-
-        const poll =
-          response.data.data?.poll ||
-          response.data.data;
-
-        setQuestion(poll.question || "");
-        setCategory(poll.category || "");
-
-        setOptions(
-          poll.options?.map((option) => ({
-            id: option.id,
-            text: option.text || "",
-          })) || []
-        );
-
-        if (poll.closesAt) {
-          const date = new Date(poll.closesAt);
-
-          const localDate = new Date(
-            date.getTime() -
-              date.getTimezoneOffset() * 60000
-          )
-            .toISOString()
-            .slice(0, 16);
-
-          setClosesAt(localDate);
-        }
-      } catch (error) {
-        console.error(
-          "Failed to load poll:",
-          error
-        );
-
-        setError(
-          error.response?.data?.message ||
-            "Unable to load poll."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPoll();
   }, [id]);
 
-  // =========================
-  // OPTION HANDLERS
-  // =========================
+  const fetchPoll = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await api.get(`/polls/${id}`);
+
+      const poll = response.data?.data?.poll || response.data?.data;
+
+      if (!poll) {
+        throw new Error("Poll data was not found.");
+      }
+
+      setQuestion(poll.question || "");
+      setCategory(poll.category || "");
+
+      // Convert backend closing date into datetime-local format
+      if (poll.closesAt) {
+        const date = new Date(poll.closesAt);
+
+        if (!Number.isNaN(date.getTime())) {
+          setClosesAt(formatDateTimeLocal(date));
+        }
+      } else {
+        setClosesAt("");
+      }
+
+      // Backend options are objects such as:
+      // { _id: "...", text: "Ankara" }
+      const pollOptions = Array.isArray(poll.options)
+        ? poll.options
+        : [];
+
+      setOptions(
+        pollOptions.map((option, index) => ({
+          id: option._id || option.id || `option-${index}`,
+          text: option.text || option.label || "",
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to fetch poll:", err);
+      console.error("Backend response:", err.response?.data);
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to load poll."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDateTimeLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   const handleOptionChange = (index, value) => {
     setOptions((currentOptions) =>
@@ -94,7 +110,7 @@ const AdminEditPoll = () => {
     setOptions((currentOptions) => [
       ...currentOptions,
       {
-        id: `new-${Date.now()}`,
+        id: `new-option-${Date.now()}`,
         text: "",
       },
     ]);
@@ -102,20 +118,16 @@ const AdminEditPoll = () => {
 
   const removeOption = (index) => {
     if (options.length <= 2) {
-      alert("A poll must have at least 2 options.");
+      setError("A poll must have at least 2 options.");
       return;
     }
 
     setOptions((currentOptions) =>
-      currentOptions.filter(
-        (_, optionIndex) => optionIndex !== index
-      )
+      currentOptions.filter((_, optionIndex) => optionIndex !== index)
     );
-  };
 
-  // =========================
-  // SAVE CHANGES
-  // =========================
+    setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,346 +135,331 @@ const AdminEditPoll = () => {
     setError("");
     setSuccess("");
 
-    const trimmedQuestion = question.trim();
+    // -----------------------------
+    // VALIDATION
+    // -----------------------------
 
-    const cleanedOptions = options
-      .map((option) => option.text.trim())
-      .filter(Boolean);
-
-    if (!trimmedQuestion) {
+    if (!question.trim()) {
       setError("Please enter a poll question.");
       return;
     }
 
-    if (cleanedOptions.length < 2) {
-      setError(
-        "A poll must have at least 2 options."
-      );
+    if (!category) {
+      setError("Please select a category.");
       return;
+    }
+
+    if (options.length < 2) {
+      setError("A poll must have at least 2 options.");
+      return;
+    }
+
+    // Clean options and convert them
+    // to the format expected by the backend.
+    const cleanedOptions = options.map((option) => ({
+      text: option.text.trim(),
+    }));
+
+    // Make sure no option is empty
+    if (cleanedOptions.some((option) => !option.text)) {
+      setError("Please fill in all poll options.");
+      return;
+    }
+
+    // Prevent duplicate options
+    const uniqueOptions = new Set(
+      cleanedOptions.map((option) => option.text.toLowerCase())
+    );
+
+    if (uniqueOptions.size !== cleanedOptions.length) {
+      setError("Poll options must be different from each other.");
+      return;
+    }
+
+    // Validate closing date
+    if (closesAt) {
+      const closingDate = new Date(closesAt);
+
+      if (Number.isNaN(closingDate.getTime())) {
+        setError("Please enter a valid closing date.");
+        return;
+      }
     }
 
     try {
       setSaving(true);
 
+      // -----------------------------
+      // UPDATE PAYLOAD
+      // -----------------------------
+
       const payload = {
-        question: trimmedQuestion,
+        question: question.trim(),
         category,
         options: cleanedOptions,
       };
 
       if (closesAt) {
-        payload.closesAt = new Date(
-          closesAt
-        ).toISOString();
+        payload.closesAt = new Date(closesAt).toISOString();
       }
 
-      await api.patch(
-        `/polls/${id}`,
-        payload
-      );
+      console.log("Updating poll with payload:", payload);
+
+      // Example payload:
+      //
+      // {
+      //   question: "What's your style of dress for this year",
+      //   category: "lifestyle",
+      //   options: [
+      //     { text: "Ankara" },
+      //     { text: "Golden" }
+      //   ],
+      //   closesAt: "2027-01-08T11:00:00.000Z"
+      // }
+
+      const response = await api.patch(`/polls/${id}`, payload);
+
+      console.log("Poll update response:", response.data);
 
       setSuccess("Poll updated successfully.");
 
+      // Give the success message a moment to show
       setTimeout(() => {
         navigate(`/admin/polls/${id}`);
       }, 800);
-    } catch (error) {
-      console.error(
-        "Failed to update poll:",
-        error
-      );
+    } catch (err) {
+      console.error("Failed to update poll:", err);
+      console.error("Backend response:", err.response?.data);
+      console.error("Status:", err.response?.status);
+      console.error("Request payload:", err.config?.data);
 
-      setError(
-        error.response?.data?.message ||
-          "Unable to update poll."
-      );
+      const backendMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.response?.data?.errors;
+
+      if (Array.isArray(backendMessage)) {
+        setError(backendMessage.join(", "));
+      } else if (typeof backendMessage === "object") {
+        setError(JSON.stringify(backendMessage));
+      } else {
+        setError(
+          backendMessage ||
+            "The poll could not be updated. Please try again."
+        );
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  // =========================
-  // LOADING
-  // =========================
+  // -----------------------------
+  // LOADING STATE
+  // -----------------------------
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-gray-200 bg-white">
-        <div className="flex flex-col items-center gap-3">
-          <Icon
-            icon="mdi:loading"
-            width="32"
-            className="animate-spin text-[#3B82F6]"
-          />
-
-          <p className="text-sm text-gray-500">
-            Loading poll...
-          </p>
-        </div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-gray-500">Loading poll...</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl">
+      {/* HEADER */}
+      <div className="mb-8">
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/polls/${id}`)}
+          className="mb-4 text-sm font-medium text-[#1554B8] hover:underline"
+        >
+          ← Back to Poll
+        </button>
 
-      {/* Back */}
-      <Link
-        to={`/admin/polls/${id}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-[#3B82F6]"
-      >
-        <Icon
-          icon="mdi:arrow-left"
-          width="19"
-        />
-
-        Back to Poll
-      </Link>
-
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-gray-900">
           Edit Poll
         </h1>
 
-        <p className="mt-1 text-sm text-gray-500">
-          Update the poll question, options, category,
-          or closing date.
+        <p className="mt-2 text-gray-500">
+          Update the poll question, category, options, or closing date.
         </p>
       </div>
 
-      {/* Error */}
+      {/* ERROR MESSAGE */}
       {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-          <Icon
-            icon="mdi:alert-circle-outline"
-            width="21"
-          />
-
-          <p>{error}</p>
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
       )}
 
-      {/* Success */}
+      {/* SUCCESS MESSAGE */}
       {success && (
-        <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-600">
-          <Icon
-            icon="mdi:check-circle-outline"
-            width="21"
-          />
-
-          <p>{success}</p>
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
         </div>
       )}
 
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6"
-      >
-
-        {/* Basic Information */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Poll Information
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              Update the basic details of this poll.
-            </p>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* =========================
+            POLL INFORMATION
+        ========================== */}
+        <div className="rounded-xl bg-white p-6 shadow-sm">
+          <h2 className="mb-5 text-lg font-semibold text-gray-900">
+            Poll Information
+          </h2>
 
           <div className="space-y-5">
-
-            {/* Question */}
+            {/* QUESTION */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="question"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
                 Poll Question
               </label>
 
               <textarea
+                id="question"
                 value={question}
-                onChange={(e) =>
-                  setQuestion(e.target.value)
-                }
-                rows="3"
-                placeholder="Enter your poll question..."
-                className="w-full resize-none rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={4}
+                placeholder="Enter your poll question"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-[#1554B8] focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
-            {/* Category */}
+            {/* CATEGORY */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="category"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
                 Category
               </label>
 
               <select
+                id="category"
                 value={category}
-                onChange={(e) =>
-                  setCategory(e.target.value)
-                }
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#1554B8] focus:ring-2 focus:ring-blue-100"
               >
-                <option value="">
-                  Select a category
-                </option>
+                <option value="">Select category</option>
 
-                <option value="technology">
-                  Technology
-                </option>
-
-                <option value="education">
-                  Education
-                </option>
-
-                <option value="politics">
-                  Politics
-                </option>
-
-                <option value="food">
-                  Food
-                </option>
-
-                <option value="sports">
-                  Sports
-                </option>
-
-                <option value="lifestyle">
-                  Lifestyle
-                </option>
+                {categories.map((item) => (
+                  <option key={item} value={item.toLowerCase()}>
+                    {item}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Closing Date */}
+            {/* CLOSING DATE */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Closing Date
+              <label
+                htmlFor="closesAt"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Closing Date & Time
               </label>
 
               <input
+                id="closesAt"
                 type="datetime-local"
                 value={closesAt}
-                onChange={(e) =>
-                  setClosesAt(e.target.value)
-                }
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                onChange={(e) => setClosesAt(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-[#1554B8] focus:ring-2 focus:ring-blue-100"
               />
 
-              <p className="mt-1.5 text-xs text-gray-400">
-                Leave unchanged if you don't want to
-                modify the closing date.
+              <p className="mt-2 text-xs text-gray-500">
+                Leave empty if the poll should not have a closing date.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Options */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* =========================
+            POLL OPTIONS
+        ========================== */}
+        <div className="rounded-xl bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
                 Poll Options
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
-                Update the choices voters can select.
+                Add or edit the choices voters can select.
               </p>
             </div>
 
             <button
               type="button"
               onClick={addOption}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#3B82F6] px-4 py-2.5 text-sm font-medium text-[#3B82F6] transition hover:bg-blue-50"
+              className="rounded-lg bg-[#1554B8] px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
-              <Icon
-                icon="mdi:plus"
-                width="19"
-              />
-
-              Add Option
+              + Add Option
             </button>
           </div>
 
           <div className="space-y-3">
-
             {options.map((option, index) => (
               <div
-                key={option.id || index}
+                key={option.id}
                 className="flex items-center gap-3"
               >
-
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-500">
+                {/* NUMBER */}
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
                   {index + 1}
-                </div>
+                </span>
 
+                {/* OPTION INPUT */}
                 <input
                   type="text"
                   value={option.text}
                   onChange={(e) =>
-                    handleOptionChange(
-                      index,
-                      e.target.value
-                    )
+                    handleOptionChange(index, e.target.value)
                   }
-                  placeholder={`Option ${
-                    index + 1
-                  }`}
-                  className="flex-1 rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                  placeholder={`Option ${index + 1}`}
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-[#1554B8] focus:ring-2 focus:ring-blue-100"
                 />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    removeOption(index)
-                  }
-                  className="rounded-lg p-2.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                  title="Remove option"
-                >
-                  <Icon
-                    icon="mdi:delete-outline"
-                    width="20"
-                  />
-                </button>
+                {/* REMOVE */}
+                {options.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => removeOption(index)}
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-
-          <Link
-            to={`/admin/polls/${id}`}
-            className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        {/* =========================
+            ACTION BUTTONS
+        ========================== */}
+        <div className="flex items-center justify-end gap-3 pb-8">
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/polls/${id}`)}
+            className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
             Cancel
-          </Link>
+          </button>
 
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-[#1554B8] px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving && (
-              <Icon
-                icon="mdi:loading"
-                width="19"
-                className="animate-spin"
-              />
-            )}
-
-            {saving
-              ? "Saving..."
-              : "Save Changes"}
+            {saving ? "Updating..." : "Update Poll"}
           </button>
         </div>
       </form>
     </div>
   );
-};
-
-export default AdminEditPoll;
+}
