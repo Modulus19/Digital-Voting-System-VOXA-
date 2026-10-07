@@ -20,79 +20,79 @@ const Dashboard = () => {
   const [statsUnavailable, setStatsUnavailable] = useState(false);
 
   const fetchDashboardData = async () => {
-  try {
-    setLoading(true);
-    setError("");
-    setStatsUnavailable(false);
+    try {
+      setLoading(true);
+      setError("");
+      setStatsUnavailable(false);
 
-    const [statsRes, pollsRes] = await Promise.allSettled([
-      api.get("/admin/stats"),
-      api.get("/polls"),
-    ]);
+      const [statsRes, pollsRes] = await Promise.allSettled([
+        api.get("/admin/stats"),
+        api.get("/polls"),
+      ]);
 
-    // Polls are required; if this fails, show the error state
-    if (pollsRes.status === "rejected") {
+      // Polls are required; if this fails, show the error state
+      if (pollsRes.status === "rejected") {
+        setError(
+          pollsRes.reason?.response?.data?.message ||
+            "Unable to load polls."
+        );
+        return;
+      }
+
+      const pollsData = pollsRes.value.data.data;
+      const list = pollsData?.polls || pollsData || [];
+      const fetchedPolls = Array.isArray(list) ? list : [];
+      setPolls(fetchedPolls);
+
+      if (statsRes.status === "fulfilled") {
+        const stats = statsRes.value.data.data || {};
+        setAdminStats({
+          totalUsers: stats.totalUsers ?? 0,
+          totalPolls: stats.totalPolls ?? 0,
+          totalVotes: stats.totalVotes ?? 0,
+          publishedPolls: stats.publishedPolls ?? 0,
+          draftPolls: stats.draftPolls ?? 0,
+          closedPolls: stats.closedPolls ?? 0,
+          activePolls: stats.activePolls ?? 0,
+        });
+      } else {
+        // Backend stats not ready: derive what we can from the polls
+        console.warn(
+          "Stats unavailable:",
+          statsRes.reason?.response?.status
+        );
+
+        const countByStatus = (s) =>
+          fetchedPolls.filter((p) => p.status === s).length;
+
+        const totalVotes = fetchedPolls.reduce(
+          (sum, p) =>
+            sum +
+            (p.votesCount ?? p.totalVotes ?? p.voteCount ?? 0),
+          0
+        );
+
+        setAdminStats({
+          totalUsers: 0,
+          totalPolls: fetchedPolls.length,
+          totalVotes,
+          publishedPolls: countByStatus("published"),
+          draftPolls: countByStatus("draft"),
+          closedPolls: countByStatus("closed"),
+          activePolls: countByStatus("published"),
+        });
+        setStatsUnavailable(true);
+      }
+    } catch (error) {
+      console.error("Failed to load dashboard:", error);
       setError(
-        pollsRes.reason?.response?.data?.message ||
-          "Unable to load polls."
+        error.response?.data?.message ||
+          "Unable to load dashboard data."
       );
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const pollsData = pollsRes.value.data.data;
-    const list = pollsData?.polls || pollsData || [];
-    const fetchedPolls = Array.isArray(list) ? list : [];
-    setPolls(fetchedPolls);
-
-    if (statsRes.status === "fulfilled") {
-      const stats = statsRes.value.data.data || {};
-      setAdminStats({
-        totalUsers: stats.totalUsers ?? 0,
-        totalPolls: stats.totalPolls ?? 0,
-        totalVotes: stats.totalVotes ?? 0,
-        publishedPolls: stats.publishedPolls ?? 0,
-        draftPolls: stats.draftPolls ?? 0,
-        closedPolls: stats.closedPolls ?? 0,
-        activePolls: stats.activePolls ?? 0,
-      });
-    } else {
-      // Backend stats not ready: derive what we can from the polls
-      console.warn(
-        "Stats unavailable:",
-        statsRes.reason?.response?.status
-      );
-
-      const countByStatus = (s) =>
-        fetchedPolls.filter((p) => p.status === s).length;
-
-      const totalVotes = fetchedPolls.reduce(
-        (sum, p) =>
-          sum +
-          (p.votesCount ?? p.totalVotes ?? p.voteCount ?? 0),
-        0
-      );
-
-      setAdminStats({
-        totalUsers: 0,
-        totalPolls: fetchedPolls.length,
-        totalVotes,
-        publishedPolls: countByStatus("published"),
-        draftPolls: countByStatus("draft"),
-        closedPolls: countByStatus("closed"),
-        activePolls: countByStatus("published"),
-      });
-      setStatsUnavailable(true);
-    }
-  } catch (error) {
-    console.error("Failed to load dashboard:", error);
-    setError(
-      error.response?.data?.message ||
-        "Unable to load dashboard data."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -295,22 +295,23 @@ const Dashboard = () => {
           Refresh
         </button>
       </div>
+
       {statsUnavailable && (
-  <div className="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
-    <Icon
-      icon="mdi:information-outline"
-      width="20"
-      className="mt-0.5 shrink-0"
-    />
-    <p>
-      Live admin stats aren't available yet. Poll numbers below are
-      calculated from your polls list, and user count is hidden.
-    </p>
-  </div>
-)}
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+          <Icon
+            icon="mdi:information-outline"
+            width="20"
+            className="mt-0.5 shrink-0"
+          />
+          <p>
+            Live admin stats aren't available yet. Poll numbers below are
+            calculated from your polls list, and user count is hidden.
+          </p>
+        </div>
+      )}
 
       {/* Main Statistics */}
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {/* Total Users */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between">
@@ -320,7 +321,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {adminStats.totalUsers}
+                {statsUnavailable ? "—" : adminStats.totalUsers}
               </p>
 
               <p className="mt-2 text-xs text-gray-400">
@@ -372,7 +373,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {statsUnavailable ? "—" : adminStats.totalUsers}
+                {adminStats.totalVotes}
               </p>
 
               <p className="mt-2 text-xs text-gray-400">
@@ -417,7 +418,7 @@ const Dashboard = () => {
       </div>
 
       {/* Secondary Statistics */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Published Polls */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between">
@@ -508,9 +509,9 @@ const Dashboard = () => {
       </div>
 
       {/* Activity + Recent Polls */}
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Weekly Activity */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
               Poll Activity
@@ -521,7 +522,7 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex h-56 items-end gap-3">
+          <div className="flex h-56 items-end gap-1.5 sm:gap-3">
             {weeklyActivity.map((day) => {
               const height =
                 day.count === 0
@@ -566,7 +567,7 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Polls */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
@@ -691,7 +692,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Link
             to="/polls/create"
             className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition hover:border-[#3B82F6] hover:bg-blue-50"
@@ -732,28 +733,6 @@ const Dashboard = () => {
 
               <p className="text-xs text-gray-500">
                 View all polls
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            to="/admin/settings"
-            className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition hover:border-[#3B82F6] hover:bg-blue-50"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
-              <Icon
-                icon="mdi:cog-outline"
-                width="21"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Settings
-              </p>
-
-              <p className="text-xs text-gray-500">
-                Manage preferences
               </p>
             </div>
           </Link>

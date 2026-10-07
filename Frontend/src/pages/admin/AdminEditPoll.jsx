@@ -25,6 +25,8 @@ export default function AdminEditPoll() {
   const [category, setCategory] = useState("");
   const [closesAt, setClosesAt] = useState("");
   const [options, setOptions] = useState([]);
+  const [pollStatus, setPollStatus] = useState("");
+  const [originalClosesAt, setOriginalClosesAt] = useState("");
 
   useEffect(() => {
     fetchPoll();
@@ -43,16 +45,23 @@ export default function AdminEditPoll() {
         throw new Error("Poll data was not found.");
       }
 
+      if (poll.status && poll.status !== "draft") {
+        setError("Only draft polls can be edited. This poll is " + poll.status + ".");
+      }
+
       setQuestion(poll.question || "");
       setCategory(poll.category || "");
+      setPollStatus(poll.status || "");
 
       // Convert backend closing date into datetime-local format
       if (poll.closesAt) {
         const date = new Date(poll.closesAt);
 
-        if (!Number.isNaN(date.getTime())) {
-          setClosesAt(formatDateTimeLocal(date));
-        }
+      if (!Number.isNaN(date.getTime())) {
+        const formatted = formatDateTimeLocal(date);
+        setClosesAt(formatted);
+        setOriginalClosesAt(formatted);
+      }
       } else {
         setClosesAt("");
       }
@@ -135,9 +144,7 @@ export default function AdminEditPoll() {
     setError("");
     setSuccess("");
 
-    // -----------------------------
     // VALIDATION
-    // -----------------------------
 
     if (!question.trim()) {
       setError("Please enter a poll question.");
@@ -177,11 +184,16 @@ export default function AdminEditPoll() {
     }
 
     // Validate closing date
-    if (closesAt) {
+    if (closesAt && closesAt !== originalClosesAt) {
       const closingDate = new Date(closesAt);
 
       if (Number.isNaN(closingDate.getTime())) {
         setError("Please enter a valid closing date.");
+        return;
+      }
+
+      if (closingDate <= new Date()) {
+        setError("The closing date must be in the future.");
         return;
       }
     }
@@ -189,9 +201,7 @@ export default function AdminEditPoll() {
     try {
       setSaving(true);
 
-      // -----------------------------
       // UPDATE PAYLOAD
-      // -----------------------------
 
       const payload = {
         question: question.trim(),
@@ -199,7 +209,7 @@ export default function AdminEditPoll() {
         options: cleanedOptions,
       };
 
-      if (closesAt) {
+      if (closesAt && closesAt !== originalClosesAt) {
         payload.closesAt = new Date(closesAt).toISOString();
       }
 
@@ -378,9 +388,9 @@ export default function AdminEditPoll() {
           </div>
         </div>
 
-        {/* =========================
-            POLL OPTIONS
-        ========================== */}
+    
+        //  POLL OPTIONS
+      
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -408,12 +418,12 @@ export default function AdminEditPoll() {
                 key={option.id}
                 className="flex items-center gap-3"
               >
-                {/* NUMBER */}
+                // NUMBER 
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
                   {index + 1}
                 </span>
 
-                {/* OPTION INPUT */}
+                //OPTION INPUT 
                 <input
                   type="text"
                   value={option.text}
@@ -439,9 +449,8 @@ export default function AdminEditPoll() {
           </div>
         </div>
 
-        {/* =========================
-            ACTION BUTTONS
-        ========================== */}
+            //ACTION BUTTONS
+
         <div className="flex items-center justify-end gap-3 pb-8">
           <button
             type="button"
@@ -453,7 +462,7 @@ export default function AdminEditPoll() {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || (pollStatus && pollStatus !== "draft")}
             className="rounded-lg bg-[#1554B8] px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Updating..." : "Update Poll"}

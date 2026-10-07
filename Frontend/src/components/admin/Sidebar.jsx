@@ -1,7 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
+import { useAuth } from "../../context/AuthContext";
 
 const Sidebar = ({ onClose }) => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const navItems = [
     {
       label: "Dashboard",
@@ -20,15 +24,33 @@ const Sidebar = ({ onClose }) => {
     },
   ];
 
+  const handleLogout = () => {
+    logout();
+    onClose?.();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <aside className="flex h-full w-64 flex-col bg-[#1554B8] text-white">
       {/* Logo */}
-      <div className="flex h-20 items-center px-6">
+      <div className="flex h-20 items-center justify-between px-6">
         <NavLink to="/admin" onClick={onClose}>
           <span className="text-2xl font-bold tracking-tight">
             VOXA
           </span>
         </NavLink>
+
+        {/* Close button (mobile only, because only the mobile sidebar gets onClose) */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-100 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close admin menu"
+          >
+            <Icon icon="mdi:close" width="22" height="22" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -57,28 +79,10 @@ const Sidebar = ({ onClose }) => {
 
       {/* Bottom Navigation */}
       <div className="border-t border-white/10 p-4">
-        <NavLink
-          to="/admin/settings"
-          onClick={onClose}
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
-              isActive
-                ? "bg-[#3B82F6] text-white"
-                : "text-blue-100 hover:bg-white/10 hover:text-white"
-            }`
-          }
-        >
-          <Icon
-            icon="mdi:cog-outline"
-            width="20"
-            height="20"
-          />
-          <span>Settings</span>
-        </NavLink>
-
         <button
           type="button"
-          className="mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-blue-100 transition hover:bg-white/10 hover:text-white"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-blue-100 transition hover:bg-white/10 hover:text-white"
         >
           <Icon
             icon="mdi:logout"
@@ -93,4 +97,3 @@ const Sidebar = ({ onClose }) => {
 };
 
 export default Sidebar;
-

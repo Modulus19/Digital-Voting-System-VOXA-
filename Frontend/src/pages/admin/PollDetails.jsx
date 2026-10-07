@@ -243,10 +243,10 @@ const AdminPollDetails = () => {
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
 
         {/* Poll title */}
-        <div>
+        <div className="min-w-0">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
               <Icon icon="mdi:poll" width="23" />
@@ -261,7 +261,7 @@ const AdminPollDetails = () => {
             </span>
           </div>
 
-          <h1 className="max-w-3xl text-2xl font-bold text-gray-900">
+          <h1 className="max-w-3xl break-words text-2xl font-bold text-gray-900">
             {poll.question}
           </h1>
 
@@ -313,10 +313,10 @@ const AdminPollDetails = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
         {/* Total Votes */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Total Votes
           </p>
@@ -336,7 +336,7 @@ const AdminPollDetails = () => {
         </div>
 
         {/* Options */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Options
           </p>
@@ -355,12 +355,12 @@ const AdminPollDetails = () => {
         </div>
 
         {/* Category */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Category
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-gray-900">
+          <p className="mt-2 break-words text-3xl font-bold text-gray-900">
             {formatCategory(poll.category)}
           </p>
 
@@ -372,7 +372,7 @@ const AdminPollDetails = () => {
       </div>
 
       {/* Poll Information */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
 
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -384,7 +384,7 @@ const AdminPollDetails = () => {
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
@@ -437,7 +437,7 @@ const AdminPollDetails = () => {
       </div>
 
       {/* Poll Results */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
 
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -486,11 +486,11 @@ const AdminPollDetails = () => {
             {results.map((result) => (
               <div key={result.optionId}>
                 <div className="mb-2 flex items-center justify-between gap-4">
-                  <span className="text-sm font-medium text-gray-800">
+                  <span className="min-w-0 break-words text-sm font-medium text-gray-800">
                     {result.option}
                   </span>
 
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="shrink-0 text-sm font-semibold text-gray-700">
                     {result.votes}{" "}
                     {result.votes === 1
                       ? "vote"

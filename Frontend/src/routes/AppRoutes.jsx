@@ -37,7 +37,6 @@ import Dashboard from "../pages/admin/Dashboard";
 import AllPolls from "../pages/admin/AllPolls";
 import ManageUsers from "../pages/admin/ManageUsers";
 import AdminPollDetails from "../pages/admin/PollDetails";
-import Settings from "../pages/admin/Settings";
 import AdminEditPoll from "../pages/admin/AdminEditPoll";
 
 function AppRoutes() {
@@ -135,10 +134,6 @@ function AppRoutes() {
             element={<ManageUsers />}
           />
 
-          <Route
-            path="/admin/settings"
-            element={<Settings />}
-          />
         </Route>
       </Route>
 
