@@ -5,116 +5,98 @@ import api from "../../services/api";
 
 const Dashboard = () => {
   const [polls, setPolls] = useState([]);
-  const [voteTotals, setVoteTotals] = useState({});
+  const [adminStats, setAdminStats] = useState({
+    totalUsers: 0,
+    totalPolls: 0,
+    totalVotes: 0,
+    publishedPolls: 0,
+    draftPolls: 0,
+    closedPolls: 0,
+    activePolls: 0,
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statsUnavailable, setStatsUnavailable] = useState(false);
 
   const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  try {
+    setLoading(true);
+    setError("");
+    setStatsUnavailable(false);
 
-      const pollsResponse = await api.get("/polls");
+    const [statsRes, pollsRes] = await Promise.allSettled([
+      api.get("/admin/stats"),
+      api.get("/polls"),
+    ]);
 
-      console.log(
-        "DASHBOARD POLLS:",
-        JSON.stringify(pollsResponse.data, null, 2)
-      );
-
-      const fetchedPolls =
-        pollsResponse.data.data?.polls ||
-        pollsResponse.data.data ||
-        [];
-
-      setPolls(fetchedPolls);
-
-      /*
-        The polls endpoint does not currently return
-        totalVotes, so we retrieve the results for each poll.
-      */
-      const voteResults = await Promise.all(
-        fetchedPolls.map(async (poll) => {
-          try {
-            const response = await api.get(
-              `/polls/${poll.id}/results`
-            );
-
-            return {
-              pollId: poll.id,
-              totalVotes:
-                response.data.data?.totalVotes ?? 0,
-            };
-          } catch (error) {
-            console.error(
-              `Failed to get results for ${poll.id}:`,
-              error
-            );
-
-            return {
-              pollId: poll.id,
-              totalVotes: 0,
-            };
-          }
-        })
-      );
-
-      const voteMap = {};
-
-      voteResults.forEach((item) => {
-        voteMap[item.pollId] = item.totalVotes;
-      });
-
-      setVoteTotals(voteMap);
-    } catch (error) {
-      console.error(
-        "Failed to load dashboard:",
-        error
-      );
-
+    // Polls are required; if this fails, show the error state
+    if (pollsRes.status === "rejected") {
       setError(
-        error.response?.data?.message ||
-          "Unable to load dashboard data."
+        pollsRes.reason?.response?.data?.message ||
+          "Unable to load polls."
       );
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    const pollsData = pollsRes.value.data.data;
+    const list = pollsData?.polls || pollsData || [];
+    const fetchedPolls = Array.isArray(list) ? list : [];
+    setPolls(fetchedPolls);
+
+    if (statsRes.status === "fulfilled") {
+      const stats = statsRes.value.data.data || {};
+      setAdminStats({
+        totalUsers: stats.totalUsers ?? 0,
+        totalPolls: stats.totalPolls ?? 0,
+        totalVotes: stats.totalVotes ?? 0,
+        publishedPolls: stats.publishedPolls ?? 0,
+        draftPolls: stats.draftPolls ?? 0,
+        closedPolls: stats.closedPolls ?? 0,
+        activePolls: stats.activePolls ?? 0,
+      });
+    } else {
+      // Backend stats not ready: derive what we can from the polls
+      console.warn(
+        "Stats unavailable:",
+        statsRes.reason?.response?.status
+      );
+
+      const countByStatus = (s) =>
+        fetchedPolls.filter((p) => p.status === s).length;
+
+      const totalVotes = fetchedPolls.reduce(
+        (sum, p) =>
+          sum +
+          (p.votesCount ?? p.totalVotes ?? p.voteCount ?? 0),
+        0
+      );
+
+      setAdminStats({
+        totalUsers: 0,
+        totalPolls: fetchedPolls.length,
+        totalVotes,
+        publishedPolls: countByStatus("published"),
+        draftPolls: countByStatus("draft"),
+        closedPolls: countByStatus("closed"),
+        activePolls: countByStatus("published"),
+      });
+      setStatsUnavailable(true);
+    }
+  } catch (error) {
+    console.error("Failed to load dashboard:", error);
+    setError(
+      error.response?.data?.message ||
+        "Unable to load dashboard data."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  /*
-    Dashboard statistics
-  */
-  const stats = useMemo(() => {
-    const totalPolls = polls.length;
-
-    const publishedPolls = polls.filter(
-      (poll) => poll.status === "published"
-    ).length;
-
-    const draftPolls = polls.filter(
-      (poll) => poll.status === "draft"
-    ).length;
-
-    const closedPolls = polls.filter(
-      (poll) => poll.status === "closed"
-    ).length;
-
-    const totalVotes = Object.values(voteTotals).reduce(
-      (total, votes) => total + votes,
-      0
-    );
-
-    return {
-      totalPolls,
-      publishedPolls,
-      draftPolls,
-      closedPolls,
-      totalVotes,
-    };
-  }, [polls, voteTotals]);
 
   /*
     Sort newest polls first
@@ -145,9 +127,9 @@ const Dashboard = () => {
       nextDate.setDate(nextDate.getDate() + 1);
 
       const count = polls.filter((poll) => {
-        const createdAt = new Date(
-          poll.createdAt
-        );
+        if (!poll.createdAt) return false;
+
+        const createdAt = new Date(poll.createdAt);
 
         return (
           createdAt >= date &&
@@ -168,6 +150,17 @@ const Dashboard = () => {
     ...weeklyActivity.map((day) => day.count),
     1
   );
+
+  /*
+    Average votes per poll
+  */
+  const averageVotesPerPoll =
+    adminStats.totalPolls > 0
+      ? (
+          adminStats.totalVotes /
+          adminStats.totalPolls
+        ).toFixed(1)
+      : "0.0";
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -302,9 +295,48 @@ const Dashboard = () => {
           Refresh
         </button>
       </div>
+      {statsUnavailable && (
+  <div className="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+    <Icon
+      icon="mdi:information-outline"
+      width="20"
+      className="mt-0.5 shrink-0"
+    />
+    <p>
+      Live admin stats aren't available yet. Poll numbers below are
+      calculated from your polls list, and user count is hidden.
+    </p>
+  </div>
+)}
 
       {/* Main Statistics */}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Total Users */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-gray-500">
+                Total Users
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-gray-900">
+                {adminStats.totalUsers}
+              </p>
+
+              <p className="mt-2 text-xs text-gray-400">
+                Registered users
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
+              <Icon
+                icon="mdi:account-group-outline"
+                width="23"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Total Polls */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between">
@@ -314,7 +346,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {stats.totalPolls}
+                {adminStats.totalPolls}
               </p>
 
               <p className="mt-2 text-xs text-gray-400">
@@ -322,7 +354,7 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
               <Icon
                 icon="mdi:poll"
                 width="23"
@@ -340,7 +372,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {stats.totalVotes}
+                {statsUnavailable ? "—" : adminStats.totalUsers}
               </p>
 
               <p className="mt-2 text-xs text-gray-400">
@@ -357,24 +389,49 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Published Polls */}
+        {/* Active Polls */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-gray-500">
+                Active Polls
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-gray-900">
+                {adminStats.activePolls}
+              </p>
+
+              <p className="mt-2 text-xs text-gray-400">
+                Currently active
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-50 text-green-600">
+              <Icon
+                icon="mdi:chart-timeline-variant"
+                width="23"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Statistics */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Published Polls */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">
                 Published Polls
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {stats.publishedPolls}
-              </p>
-
-              <p className="mt-2 text-xs text-gray-400">
-                Currently published
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {adminStats.publishedPolls}
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-50 text-green-600">
               <Icon
                 icon="mdi:check-circle-outline"
                 width="23"
@@ -385,18 +442,14 @@ const Dashboard = () => {
 
         {/* Draft Polls */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <div className="flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">
                 Draft Polls
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {stats.draftPolls}
-              </p>
-
-              <p className="mt-2 text-xs text-gray-400">
-                Unpublished polls
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {adminStats.draftPolls}
               </p>
             </div>
 
@@ -408,10 +461,8 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Secondary Stats */}
-      <div className="grid gap-5 sm:grid-cols-2">
+        {/* Closed Polls */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -420,7 +471,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-2xl font-bold text-gray-900">
-                {stats.closedPolls}
+                {adminStats.closedPolls}
               </p>
             </div>
 
@@ -433,6 +484,7 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Average Votes */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -441,12 +493,7 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-2 text-2xl font-bold text-gray-900">
-                {stats.totalPolls > 0
-                  ? (
-                      stats.totalVotes /
-                      stats.totalPolls
-                    ).toFixed(1)
-                  : "0.0"}
+                {averageVotesPerPoll}
               </p>
             </div>
 
@@ -541,65 +588,74 @@ const Dashboard = () => {
 
           {recentPolls.length > 0 ? (
             <div className="divide-y divide-gray-100">
-              {recentPolls.map((poll) => (
-                <Link
-                  key={poll.id}
-                  to={`/admin/polls/${poll.id}`}
-                  className="flex items-center justify-between gap-4 py-4 transition hover:bg-gray-50"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
-                      <Icon
-                        icon="mdi:poll"
-                        width="20"
-                      />
-                    </div>
+              {recentPolls.map((poll) => {
+                const pollVotes =
+                  poll.votesCount ??
+                  poll.totalVotes ??
+                  poll.voteCount;
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900">
-                        {poll.question}
-                      </p>
+                return (
+                  <Link
+                    key={poll.id}
+                    to={`/admin/polls/${poll.id}`}
+                    className="flex items-center justify-between gap-4 py-4 transition hover:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#3B82F6]">
+                        <Icon
+                          icon="mdi:poll"
+                          width="20"
+                        />
+                      </div>
 
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-xs text-gray-400">
-                          {formatCategory(
-                            poll.category
-                          )}
-                        </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {poll.question}
+                        </p>
 
-                        <span className="text-gray-300">
-                          •
-                        </span>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-xs text-gray-400">
+                            {formatCategory(
+                              poll.category
+                            )}
+                          </span>
 
-                        <span className="text-xs text-gray-400">
-                          {formatDate(
-                            poll.createdAt
-                          )}
-                        </span>
+                          <span className="text-gray-300">
+                            •
+                          </span>
+
+                          <span className="text-xs text-gray-400">
+                            {formatDate(
+                              poll.createdAt
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(
-                        poll.status
-                      )}`}
-                    >
-                      {formatStatus(
-                        poll.status
-                      )}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(
+                          poll.status
+                        )}`}
+                      >
+                        {formatStatus(
+                          poll.status
+                        )}
+                      </span>
 
-                    <span className="text-xs text-gray-400">
-                      {voteTotals[poll.id] ?? 0}{" "}
-                      {voteTotals[poll.id] === 1
-                        ? "vote"
-                        : "votes"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                      <span className="text-xs text-gray-400">
+                        {pollVotes ?? "—"}{" "}
+                        {pollVotes === 1
+                          ? "vote"
+                          : pollVotes !== undefined
+                            ? "votes"
+                            : ""}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
