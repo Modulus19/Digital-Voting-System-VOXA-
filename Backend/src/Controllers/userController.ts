@@ -16,8 +16,10 @@ export const getMe = async (
   }
 
   try {
-    const user = await User.findById(req.user.id).select(
-      "_id email username role emailVerified createdAt updatedAt"
+    const user = await User.findById(
+      req.user.id
+    ).select(
+      "_id email username role emailVerified isActive createdAt updatedAt"
     );
 
     if (!user) {
@@ -39,8 +41,8 @@ export const getMe = async (
           username: user.username,
           role: user.role,
           emailVerified: user.emailVerified,
+          isActive: user.isActive,
           createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
         },
       },
     });
@@ -54,7 +56,6 @@ export const getMe = async (
     });
   }
 };
-
 
 export const getMyStats = async (
   req: Request,
@@ -70,9 +71,12 @@ export const getMyStats = async (
   }
 
   try {
-    const pollIds = await Vote.distinct("poll", {
-      voter: req.user.id,
-    });
+    const pollIds = await Vote.distinct(
+      "poll",
+      {
+        voter: req.user.id,
+      }
+    );
 
     res.status(200).json({
       success: true,

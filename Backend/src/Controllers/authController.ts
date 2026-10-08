@@ -28,15 +28,12 @@ export const register = async (
   res: Response
 ): Promise<void> => {
   const validationError =
-    validateRegisterInput(
-      req.body
-    );
+    validateRegisterInput(req.body);
 
   if (validationError) {
     res.status(400).json({
       success: false,
-      message:
-        validationError,
+      message: validationError,
       data: null,
     });
     return;
@@ -48,10 +45,10 @@ export const register = async (
       email: req.body.email,
       password: req.body.password,
     });
+
     res.status(201).json({
       success: true,
-      message:
-        "Verification email sent",
+      message: "Verification email sent",
       data: {
         user,
       },
@@ -64,8 +61,7 @@ export const register = async (
     ) {
       res.status(409).json({
         success: false,
-        message:
-          error.message,
+        message: error.message,
         data: null,
       });
       return;
@@ -95,8 +91,7 @@ export const verifyEmail =
     if (validationError) {
       res.status(400).json({
         success: false,
-        message:
-          validationError,
+        message: validationError,
         data: null,
       });
       return;
@@ -118,9 +113,7 @@ export const verifyEmail =
         },
       });
     } catch (error) {
-      if (
-        error instanceof Error
-      ) {
+      if (error instanceof Error) {
         const knownErrors = [
           "Invalid verification request",
           "Email is already verified",
@@ -136,8 +129,7 @@ export const verifyEmail =
         ) {
           res.status(400).json({
             success: false,
-            message:
-              error.message,
+            message: error.message,
             data: null,
           });
           return;
@@ -148,8 +140,7 @@ export const verifyEmail =
 
       res.status(500).json({
         success: false,
-        message:
-          "Unable to verify email",
+        message: "Unable to verify email",
         data: null,
       });
     }
@@ -161,8 +152,7 @@ export const resendVerification =
     res: Response
   ): Promise<void> => {
     const email =
-      typeof req.body.email ===
-      "string"
+      typeof req.body.email === "string"
         ? req.body.email
             .trim()
             .toLowerCase()
@@ -176,18 +166,16 @@ export const resendVerification =
     ) {
       res.status(400).json({
         success: false,
-        message:
-          "Invalid email address",
+        message: "Invalid email address",
         data: null,
       });
       return;
     }
 
     try {
-      const user =
-        await User.findOne({
-          email,
-        });
+      const user = await User.findOne({
+        email,
+      });
 
       if (!user) {
         res.status(200).json({
@@ -199,9 +187,7 @@ export const resendVerification =
         return;
       }
 
-      if (
-        user.emailVerified
-      ) {
+      if (user.emailVerified) {
         res.status(400).json({
           success: false,
           message:
@@ -218,21 +204,17 @@ export const resendVerification =
 
       res.status(200).json({
         success: true,
-        message:
-          "Verification email sent",
+        message: "Verification email sent",
         data: null,
       });
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.startsWith(
-          "Please wait"
-        )
+        error.message.startsWith("Please wait")
       ) {
         res.status(429).json({
           success: false,
-          message:
-            error.message,
+          message: error.message,
           data: null,
         });
         return;
@@ -254,47 +236,37 @@ export const login = async (
   res: Response
 ): Promise<void> => {
   const validationError =
-    validateLoginInput(
-      req.body
-    );
+    validateLoginInput(req.body);
 
   if (validationError) {
     res.status(400).json({
       success: false,
-      message:
-        validationError,
+      message: validationError,
       data: null,
     });
     return;
   }
 
   try {
-    const result =
-      await loginUser({
-        email:
-          req.body.email,
-        password:
-          req.body.password,
-      });
+    const result = await loginUser({
+      email: req.body.email,
+      password: req.body.password,
+    });
 
     res.status(200).json({
       success: true,
-      message:
-        "Login successful",
+      message: "Login successful",
       data: result,
     });
   } catch (error) {
-    if (
-      error instanceof Error
-    ) {
+    if (error instanceof Error) {
       if (
         error.message ===
         "Invalid email or password"
       ) {
         res.status(401).json({
           success: false,
-          message:
-            error.message,
+          message: error.message,
           data: null,
         });
         return;
@@ -306,8 +278,19 @@ export const login = async (
       ) {
         res.status(403).json({
           success: false,
-          message:
-            error.message,
+          message: error.message,
+          data: null,
+        });
+        return;
+      }
+
+      if (
+        error.message ===
+        "Your account has been deactivated"
+      ) {
+        res.status(403).json({
+          success: false,
+          message: error.message,
           data: null,
         });
         return;
@@ -318,8 +301,7 @@ export const login = async (
 
     res.status(500).json({
       success: false,
-      message:
-        "Unable to log in",
+      message: "Unable to log in",
       data: null,
     });
   }
@@ -338,23 +320,20 @@ export const forgotPassword =
     if (validationError) {
       res.status(400).json({
         success: false,
-        message:
-          validationError,
+        message: validationError,
         data: null,
       });
       return;
     }
 
-    const email =
-      req.body.email
-        .trim()
-        .toLowerCase();
+    const email = req.body.email
+      .trim()
+      .toLowerCase();
 
     try {
-      const user =
-        await User.findOne({
-          email,
-        });
+      const user = await User.findOne({
+        email,
+      });
 
       if (user) {
         await createAndSendPasswordResetOTP(
@@ -372,14 +351,11 @@ export const forgotPassword =
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.startsWith(
-          "Please wait"
-        )
+        error.message.startsWith("Please wait")
       ) {
         res.status(429).json({
           success: false,
-          message:
-            error.message,
+          message: error.message,
           data: null,
         });
         return;
@@ -409,8 +385,7 @@ export const verifyResetOTP =
     if (validationError) {
       res.status(400).json({
         success: false,
-        message:
-          validationError,
+        message: validationError,
         data: null,
       });
       return;
@@ -425,14 +400,11 @@ export const verifyResetOTP =
 
       res.status(200).json({
         success: true,
-        message:
-          "Reset code verified",
+        message: "Reset code verified",
         data: result,
       });
     } catch (error) {
-      if (
-        error instanceof Error
-      ) {
+      if (error instanceof Error) {
         const knownErrors = [
           "Invalid password reset request",
           "Reset code is invalid or expired",
@@ -447,8 +419,7 @@ export const verifyResetOTP =
         ) {
           res.status(400).json({
             success: false,
-            message:
-              error.message,
+            message: error.message,
             data: null,
           });
           return;
@@ -479,8 +450,7 @@ export const resetPassword =
     if (validationError) {
       res.status(400).json({
         success: false,
-        message:
-          validationError,
+        message: validationError,
         data: null,
       });
       return;
@@ -505,14 +475,11 @@ export const resetPassword =
           "Invalid or expired reset token",
           "Invalid reset token",
           "User not found",
-        ].includes(
-          error.message
-        )
+        ].includes(error.message)
       ) {
         res.status(400).json({
           success: false,
-          message:
-            error.message,
+          message: error.message,
           data: null,
         });
         return;

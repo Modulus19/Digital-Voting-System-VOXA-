@@ -14,17 +14,13 @@ import { generateAccessToken } from "../Utils/generateToken.js";
 export const registerUser = async (
   data: RegisterInput
 ) => {
-  const email =
-    data.email.trim().toLowerCase();
-
+  const email = data.email.trim().toLowerCase();
   const username = data.username.trim();
-
   const { password } = data;
 
-  const existingUser =
-    await User.findOne({
-      email,
-    });
+  const existingUser = await User.findOne({
+    email,
+  });
 
   if (existingUser) {
     throw new Error(
@@ -32,11 +28,10 @@ export const registerUser = async (
     );
   }
 
-  const passwordHash =
-    await bcrypt.hash(
-      password,
-      12
-    );
+  const passwordHash = await bcrypt.hash(
+    password,
+    12
+  );
 
   const user = await User.create({
     email,
@@ -52,29 +47,26 @@ export const registerUser = async (
       user.email
     );
   } catch (error) {
-    await User.findByIdAndDelete(
-      user._id
-    );
-
+    await User.findByIdAndDelete(user._id);
     throw error;
   }
 
   return {
-    id: user._id.toString(),
-    email: user.email,
-    username: user.username,
-    role: user.role,
-    emailVerified:
-      user.emailVerified,
+    user: {
+      id: user._id.toString(),
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      isActive: user.isActive,
+    },
   };
 };
 
 export const loginUser = async (
   data: LoginInput
 ) => {
-  const email =
-    data.email.trim().toLowerCase();
-
+  const email = data.email.trim().toLowerCase();
   const { password } = data;
 
   const user = await User.findOne({
@@ -87,11 +79,10 @@ export const loginUser = async (
     );
   }
 
-  const passwordMatches =
-    await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
+  const passwordMatches = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
 
   if (!passwordMatches) {
     throw new Error(
@@ -105,12 +96,17 @@ export const loginUser = async (
     );
   }
 
-  const accessToken =
-    generateAccessToken({
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
+  if (!user.isActive) {
+    throw new Error(
+      "Your account has been deactivated"
+    );
+  }
+
+  const accessToken = generateAccessToken({
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  });
 
   return {
     user: {
@@ -118,75 +114,70 @@ export const loginUser = async (
       email: user.email,
       username: user.username,
       role: user.role,
-      emailVerified:
-        user.emailVerified,
+      emailVerified: user.emailVerified,
+      isActive: user.isActive,
     },
     accessToken,
   };
 };
 
-export const resetUserPassword =
-  async (
-    resetToken: string,
-    newPassword: string
-  ) => {
-    const jwtSecret =
-      process.env.JWT_SECRET;
+export const resetUserPassword = async (
+  resetToken: string,
+  newPassword: string
+) => {
+  const jwtSecret = process.env.JWT_SECRET;
 
-    if (!jwtSecret) {
-      throw new Error(
-        "JWT_SECRET is not defined in the environment variables"
-      );
-    }
+  if (!jwtSecret) {
+    throw new Error(
+      "JWT_SECRET is not defined in the environment variables"
+    );
+  }
 
-    let decoded:
-      | PasswordResetTokenPayload
-      | undefined;
+  let decoded:
+    | PasswordResetTokenPayload
+    | undefined;
 
-    try {
-      decoded = jwt.verify(
-        resetToken,
-        jwtSecret
-      ) as PasswordResetTokenPayload;
-    } catch {
-      throw new Error(
-        "Invalid or expired reset token"
-      );
-    }
+  try {
+    decoded = jwt.verify(
+      resetToken,
+      jwtSecret
+    ) as PasswordResetTokenPayload;
+  } catch {
+    throw new Error(
+      "Invalid or expired reset token"
+    );
+  }
 
-    if (
-      decoded.purpose !==
-      "password_reset"
-    ) {
-      throw new Error(
-        "Invalid reset token"
-      );
-    }
+  if (
+    decoded.purpose !==
+    "password_reset"
+  ) {
+    throw new Error(
+      "Invalid reset token"
+    );
+  }
 
-    const user =
-      await User.findById(
-        decoded.id
-      );
+  const user = await User.findById(
+    decoded.id
+  );
 
-    if (!user) {
-      throw new Error(
-        "User not found"
-      );
-    }
+  if (!user) {
+    throw new Error(
+      "User not found"
+    );
+  }
 
-    const passwordHash =
-      await bcrypt.hash(
-        newPassword,
-        12
-      );
+  const passwordHash = await bcrypt.hash(
+    newPassword,
+    12
+  );
 
-    user.passwordHash =
-      passwordHash;
+  user.passwordHash = passwordHash;
 
-    await user.save();
+  await user.save();
 
-    return {
-      id: user._id.toString(),
-      email: user.email,
-    };
+  return {
+    id: user._id.toString(),
+    email: user.email,
   };
+};
