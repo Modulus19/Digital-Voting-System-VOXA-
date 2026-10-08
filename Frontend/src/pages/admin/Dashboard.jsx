@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statsUnavailable, setStatsUnavailable] = useState(false);
+  const [activity, setActivity] = useState(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -25,9 +26,10 @@ const Dashboard = () => {
       setError("");
       setStatsUnavailable(false);
 
-      const [statsRes, pollsRes] = await Promise.allSettled([
+      const [statsRes, pollsRes, activityRes] = await Promise.allSettled([
         api.get("/admin/stats"),
         api.get("/polls"),
+        api.get("/admin/stats/activity?period=7d"),
       ]);
 
       // Polls are required; if this fails, show the error state
@@ -43,6 +45,12 @@ const Dashboard = () => {
       const list = pollsData?.polls || pollsData || [];
       const fetchedPolls = Array.isArray(list) ? list : [];
       setPolls(fetchedPolls);
+      if (activityRes.status === "fulfilled") {
+        const activityList = activityRes.value.data.data?.activity;
+        setActivity(Array.isArray(activityList) ? activityList : null);
+      } else {
+        setActivity(null);
+      }
 
       if (statsRes.status === "fulfilled") {
         const stats = statsRes.value.data.data || {};
@@ -115,36 +123,39 @@ const Dashboard = () => {
     Get the number of polls created in the last 7 days.
   */
   const weeklyActivity = useMemo(() => {
-    const days = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - i);
-
-      const nextDate = new Date(date);
-      nextDate.setDate(nextDate.getDate() + 1);
-
-      const count = polls.filter((poll) => {
-        if (!poll.createdAt) return false;
-
-        const createdAt = new Date(poll.createdAt);
-
-        return (
-          createdAt >= date &&
-          createdAt < nextDate
-        );
-      }).length;
-
-      days.push({
-        date,
-        count,
-      });
+    // Real votes per day from the backend
+    if (activity) {
+      return activity.map((item) => ({
+        date: new Date(`${item.date}T00:00:00`),
+        count: item.votes ?? 0,
+      }));
     }
 
-    return days;
-  }, [polls]);
+    // Fallback: polls created per day
+  const days = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - i);
+
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    const count = polls.filter((poll) => {
+      if (!poll.createdAt) return false;
+
+      const createdAt = new Date(poll.createdAt);
+
+      return createdAt >= date && createdAt < nextDate;
+  }).length;
+
+  days.push({ date, count });
+  }
+
+  return days;
+}, [polls, activity]);
 
   const maxWeeklyActivity = Math.max(
     ...weeklyActivity.map((day) => day.count),
@@ -518,7 +529,9 @@ const Dashboard = () => {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Polls created over the last 7 days.
+              {activity
+                ? "Votes submitted over the last 7 days."
+                : "Polls created over the last 7 days."}
             </p>
           </div>
 
