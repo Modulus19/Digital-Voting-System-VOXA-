@@ -9,6 +9,10 @@ export default function Navbar() {
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const username = user?.username || (user?.email ? user.email.split('@')[0] : "");
+  const initials = username
+    ? username.slice(0, 1).toUpperCase()
+    : "U";
 
   const isActive = (path) => {
     if (path === "/") {
@@ -18,9 +22,9 @@ export default function Navbar() {
     return location.pathname.startsWith(path);
   };
 
-  const initials = user?.name
-    ? user.name.slice(0, 2).toUpperCase()
-    : "";
+  // const initials = user?.name
+  //   ? user.name.slice(0, 2).toUpperCase()
+  //   : "";
 
   const closeMenu = () => {
     setMenuOpen(false);
