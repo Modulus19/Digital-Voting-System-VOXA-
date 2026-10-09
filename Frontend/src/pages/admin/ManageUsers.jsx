@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 const ManageUsers = () => {
+  const { user: currentUser } = useAuth();
+
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [openMenu, setOpenMenu] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -19,20 +26,29 @@ const ManageUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [pagination.page, roleFilter]);
+  }, [pagination.page, roleFilter, searchQuery]);
+
+  const getUserId = (user) => user.id ?? user._id;
+
+  const currentUserId = currentUser?.id ?? currentUser?._id;
+
+  const isSelf = (user) =>
+    currentUserId !== undefined &&
+    String(getUserId(user)) === String(currentUserId);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError("");
+      setOpenMenu(null);
 
       const params = {
         page: pagination.page,
         limit: pagination.limit,
       };
 
-      if (search.trim()) {
-        params.search = search.trim();
+      if (searchQuery) {
+        params.search = searchQuery;
       }
 
       if (roleFilter !== "All Roles") {
@@ -74,8 +90,131 @@ const ManageUsers = () => {
       page: 1,
     }));
 
-    fetchUsers();
+    setSearchQuery(search.trim());
   };
+
+  // =========================
+  // ACTIONS
+  // =========================
+
+  const handleToggleStatus = async (user) => {
+    const userId = getUserId(user);
+    const currentlyActive = user.isActive !== false;
+
+    const confirmed = window.confirm(
+      currentlyActive
+        ? `Deactivate ${getUserName(user)}? They will not be able to log in.`
+        : `Reactivate ${getUserName(user)}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(userId);
+
+      await api.patch(`/admin/users/${userId}/status`, {
+        isActive: !currentlyActive,
+      });
+
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          getUserId(item) === userId
+            ? { ...item, isActive: !currentlyActive }
+            : item
+        )
+      );
+
+      setOpenMenu(null);
+    } catch (err) {
+      console.error("Failed to update user status:", err);
+
+      alert(
+        err.response?.data?.message ||
+          "Unable to update user status."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeRole = async (user) => {
+    const userId = getUserId(user);
+    const newRole = user.role === "admin" ? "user" : "admin";
+
+    const confirmed = window.confirm(
+      `Change ${getUserName(user)}'s role to ${newRole}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(userId);
+
+      await api.patch(`/admin/users/${userId}/role`, {
+        role: newRole,
+      });
+
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          getUserId(item) === userId
+            ? { ...item, role: newRole }
+            : item
+        )
+      );
+
+      setOpenMenu(null);
+    } catch (err) {
+      console.error("Failed to update user role:", err);
+
+      alert(
+        err.response?.data?.message ||
+          "Unable to update user role."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (user) => {
+    const userId = getUserId(user);
+
+    const confirmed = window.confirm(
+      `Delete ${getUserName(user)}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(userId);
+
+      await api.delete(`/admin/users/${userId}`);
+
+      setOpenMenu(null);
+
+      // If that was the last user on this page, go back one page
+      if (users.length === 1 && pagination.page > 1) {
+        setPagination((prev) => ({
+          ...prev,
+          page: prev.page - 1,
+        }));
+      } else {
+        await fetchUsers();
+      }
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+
+      alert(
+        err.response?.data?.message ||
+          "Unable to delete user."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // =========================
+  // HELPERS
+  // =========================
 
   const getUserName = (user) => {
     return (
@@ -98,6 +237,16 @@ const ManageUsers = () => {
       .toUpperCase();
   };
 
+  const formatDate = (date) => {
+    if (!date) return "—";
+
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -107,7 +256,7 @@ const ManageUsers = () => {
         </h1>
 
         <p className="mt-1 text-sm text-gray-500">
-          View users registered on VOXA.
+          View and manage users registered on VOXA.
         </p>
       </div>
 
@@ -156,16 +305,24 @@ const ManageUsers = () => {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-600">{error}</p>
 
           <button
             onClick={fetchUsers}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
             Try Again
           </button>
         </div>
+      )}
+
+      {/* Click-away layer for the actions menu */}
+      {openMenu && (
+        <div
+          className="fixed inset-0 z-10"
+          onClick={() => setOpenMenu(null)}
+        />
       )}
 
       {/* Users Table */}
@@ -178,8 +335,8 @@ const ManageUsers = () => {
           </div>
         ) : users.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+            <div className="min-h-[320px] overflow-x-auto">
+              <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -198,6 +355,10 @@ const ManageUsers = () => {
                       Status
                     </th>
 
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Joined
+                    </th>
+
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Actions
                     </th>
@@ -205,69 +366,185 @@ const ManageUsers = () => {
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-                  {users.map((user) => (
-                    <tr
-                      key={user._id || user.id}
-                      className="transition hover:bg-gray-50"
-                    >
-                      {/* User */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-[#3B82F6]">
-                            {getInitials(user)}
+                  {users.map((user, index) => {
+                    const userId = getUserId(user);
+                    const self = isSelf(user);
+                    const active = user.isActive !== false;
+
+                    const openUp =
+                      users.length > 4 &&
+                      index >= users.length - 2;
+
+                    return (
+                      <tr
+                        key={userId}
+                        className="transition hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-[#3B82F6]">
+                              {getInitials(user)}
+                            </div>
+
+                            <span className="text-sm font-medium text-gray-900">
+                              {getUserName(user)}
+
+                              {self && (
+                                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                                  You
+                                </span>
+                              )}
+                            </span>
                           </div>
+                        </td>
 
-                          <span className="text-sm font-medium text-gray-900">
-                            {getUserName(user)}
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <div>{user.email || "—"}</div>
+
+                          {user.emailVerified === false && (
+                            <span className="mt-1 inline-block rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-600">
+                              Unverified
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              user.role === "admin"
+                                ? "bg-purple-50 text-purple-600"
+                                : "bg-blue-50 text-[#3B82F6]"
+                            }`}
+                          >
+                            {user.role || "user"}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Email */}
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {user.email || "—"}
-                      </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              active
+                                ? "bg-green-50 text-green-600"
+                                : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {active
+                              ? "Active"
+                              : "Deactivated"}
+                          </span>
+                        </td>
 
-                      {/* Role */}
-                      <td className="px-6 py-4">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                            user.role === "admin"
-                              ? "bg-purple-50 text-purple-600"
-                              : "bg-blue-50 text-[#3B82F6]"
-                          }`}
-                        >
-                          {user.role || "user"}
-                        </span>
-                      </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {formatDate(user.createdAt)}
+                        </td>
 
-                      {/* Status */}
-                      <td className="px-6 py-4">
-                        <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">
-                          Active
-                        </span>
-                      </td>
+                        <td className="relative px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            disabled={
+                              self ||
+                              actionLoading === userId
+                            }
+                            title={
+                              self
+                                ? "You cannot modify your own account"
+                                : undefined
+                            }
+                            onClick={() =>
+                              setOpenMenu(
+                                openMenu === userId
+                                  ? null
+                                  : userId
+                              )
+                            }
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {actionLoading === userId ? (
+                              <Icon
+                                icon="mdi:loading"
+                                width="20"
+                                className="animate-spin"
+                              />
+                            ) : (
+                              <Icon
+                                icon="mdi:dots-vertical"
+                                width="20"
+                              />
+                            )}
+                          </button>
 
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-                        >
-                          <Icon
-                            icon="mdi:dots-vertical"
-                            width="20"
-                          />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          {openMenu === userId && (
+                            <div
+                              className={`absolute right-6 z-20 w-48 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg ${
+                                openUp
+                                  ? "bottom-12"
+                                  : "top-12"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleStatus(user)
+                                }
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                <Icon
+                                  icon={
+                                    active
+                                      ? "mdi:account-off-outline"
+                                      : "mdi:account-check-outline"
+                                  }
+                                  width="18"
+                                />
+
+                                {active
+                                  ? "Deactivate"
+                                  : "Reactivate"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleChangeRole(user)
+                                }
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                <Icon
+                                  icon="mdi:shield-account-outline"
+                                  width="18"
+                                />
+
+                                {user.role === "admin"
+                                  ? "Make User"
+                                  : "Make Admin"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDelete(user)
+                                }
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                              >
+                                <Icon
+                                  icon="mdi:delete-outline"
+                                  width="18"
+                                />
+
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
+            <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-gray-500">
                 Showing{" "}
                 {users.length > 0
@@ -321,8 +598,7 @@ const ManageUsers = () => {
               </div>
             </div>
           </>
-        ) : (
-          /* Empty state */
+        ) : !error ? (
           <div className="flex min-h-[380px] flex-col items-center justify-center px-6 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
               <Icon
@@ -337,17 +613,21 @@ const ManageUsers = () => {
             </h2>
 
             <p className="mt-2 max-w-md text-sm leading-6 text-gray-500">
-              {search || roleFilter !== "All Roles"
+              {searchQuery ||
+              roleFilter !== "All Roles"
                 ? "Try adjusting your search or filters."
                 : "There are currently no users to display."}
             </p>
 
-            {(search || roleFilter !== "All Roles") && (
+            {(searchQuery ||
+              roleFilter !== "All Roles") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearch("");
+                  setSearchQuery("");
                   setRoleFilter("All Roles");
+
                   setPagination((prev) => ({
                     ...prev,
                     page: 1,
@@ -360,7 +640,7 @@ const ManageUsers = () => {
               </button>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
