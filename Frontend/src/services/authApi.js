@@ -45,3 +45,8 @@ export const getVoteHistory = async () => {
   const response = await api.get("/votes/history");
   return response.data;
 };
+
+export const getUserStats = async () => {
+  const response = await api.get("/users/me/stats");
+  return response.data;
+};

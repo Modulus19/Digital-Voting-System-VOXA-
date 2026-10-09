@@ -36,7 +36,8 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/auth", userRoutes);
+// app.use("/api/auth", userRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/api", voteRoutes);
 app.use("/api", resultRoutes);

@@ -5,6 +5,7 @@ import { authenticate } from "../Middleware/auth.js";
 const router = Router();
 
 router.get("/me", authenticate, getMe);
+// router.get("/me/stats", authenticate, getMyStats);
 router.get("/me/stats", authenticate, getMyStats);
 
 export default router;

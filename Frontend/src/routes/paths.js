@@ -17,7 +17,7 @@ const paths = {
     drafts: "/drafts",
     myVotes: "/my-votes",
     profile: "/profile",
-    editProfile: "/profile/edit",
+    
   },
 
   admin: {

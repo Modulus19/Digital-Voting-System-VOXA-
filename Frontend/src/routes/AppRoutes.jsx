@@ -6,7 +6,7 @@ import UserLayout from "../layouts/UserLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminRoute from "./AdminRoute";
-import paths from "./paths";
+//import paths from "./paths";
 import NotFound from "../pages/NotFound";
 
 // Public pages
@@ -30,7 +30,6 @@ import MyPolls from "../pages/user/MyPolls";
 import Drafts from "../pages/user/Drafts";
 import MyVotes from "../pages/user/MyVotes";
 import Profile from "../pages/user/Profile";
-import EditProfile from "../pages/user/EditProfile";
 
 // Admin pages
 import Dashboard from "../pages/admin/Dashboard";
@@ -98,10 +97,6 @@ function AppRoutes() {
           <Route
             path="/profile"
             element={<Profile />}
-          />
-          <Route
-            path="/profile/edit"
-            element={<EditProfile />}
           />
         </Route>
       </Route>
