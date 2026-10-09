@@ -8,6 +8,7 @@ const ManageUsers = () => {
 
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
 
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ const ManageUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [pagination.page, roleFilter]);
+  }, [pagination.page, roleFilter, searchQuery]);
 
   const getUserId = (user) => user.id ?? user._id;
 
@@ -46,8 +47,8 @@ const ManageUsers = () => {
         limit: pagination.limit,
       };
 
-      if (search.trim()) {
-        params.search = search.trim();
+      if (searchQuery) {
+        params.search = searchQuery;
       }
 
       if (roleFilter !== "All Roles") {
@@ -89,7 +90,7 @@ const ManageUsers = () => {
       page: 1,
     }));
 
-    fetchUsers();
+    setSearchQuery(search.trim());
   };
 
   // =========================
@@ -370,16 +371,15 @@ const ManageUsers = () => {
                     const self = isSelf(user);
                     const active = user.isActive !== false;
 
-                    // Open the menu upwards on the last rows so it is not clipped
                     const openUp =
-                      users.length > 4 && index >= users.length - 2;
+                      users.length > 4 &&
+                      index >= users.length - 2;
 
                     return (
                       <tr
                         key={userId}
                         className="transition hover:bg-gray-50"
                       >
-                        {/* User */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-[#3B82F6]">
@@ -388,6 +388,7 @@ const ManageUsers = () => {
 
                             <span className="text-sm font-medium text-gray-900">
                               {getUserName(user)}
+
                               {self && (
                                 <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
                                   You
@@ -397,7 +398,6 @@ const ManageUsers = () => {
                           </div>
                         </td>
 
-                        {/* Email */}
                         <td className="px-6 py-4 text-sm text-gray-500">
                           <div>{user.email || "—"}</div>
 
@@ -408,7 +408,6 @@ const ManageUsers = () => {
                           )}
                         </td>
 
-                        {/* Role */}
                         <td className="px-6 py-4">
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -421,7 +420,6 @@ const ManageUsers = () => {
                           </span>
                         </td>
 
-                        {/* Status */}
                         <td className="px-6 py-4">
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -430,20 +428,23 @@ const ManageUsers = () => {
                                 : "bg-red-50 text-red-600"
                             }`}
                           >
-                            {active ? "Active" : "Deactivated"}
+                            {active
+                              ? "Active"
+                              : "Deactivated"}
                           </span>
                         </td>
 
-                        {/* Joined */}
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {formatDate(user.createdAt)}
                         </td>
 
-                        {/* Actions */}
                         <td className="relative px-6 py-4 text-right">
                           <button
                             type="button"
-                            disabled={self || actionLoading === userId}
+                            disabled={
+                              self ||
+                              actionLoading === userId
+                            }
                             title={
                               self
                                 ? "You cannot modify your own account"
@@ -451,7 +452,9 @@ const ManageUsers = () => {
                             }
                             onClick={() =>
                               setOpenMenu(
-                                openMenu === userId ? null : userId
+                                openMenu === userId
+                                  ? null
+                                  : userId
                               )
                             }
                             className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
@@ -470,17 +473,19 @@ const ManageUsers = () => {
                             )}
                           </button>
 
-                          {/* Dropdown */}
                           {openMenu === userId && (
                             <div
                               className={`absolute right-6 z-20 w-48 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg ${
-                                openUp ? "bottom-12" : "top-12"
+                                openUp
+                                  ? "bottom-12"
+                                  : "top-12"
                               }`}
                             >
-                              {/* Activate / Deactivate */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleStatus(user)}
+                                onClick={() =>
+                                  handleToggleStatus(user)
+                                }
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <Icon
@@ -491,34 +496,41 @@ const ManageUsers = () => {
                                   }
                                   width="18"
                                 />
-                                {active ? "Deactivate" : "Reactivate"}
+
+                                {active
+                                  ? "Deactivate"
+                                  : "Reactivate"}
                               </button>
 
-                              {/* Change role */}
                               <button
                                 type="button"
-                                onClick={() => handleChangeRole(user)}
+                                onClick={() =>
+                                  handleChangeRole(user)
+                                }
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <Icon
                                   icon="mdi:shield-account-outline"
                                   width="18"
                                 />
+
                                 {user.role === "admin"
                                   ? "Make User"
                                   : "Make Admin"}
                               </button>
 
-                              {/* Delete */}
                               <button
                                 type="button"
-                                onClick={() => handleDelete(user)}
+                                onClick={() =>
+                                  handleDelete(user)
+                                }
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
                               >
                                 <Icon
                                   icon="mdi:delete-outline"
                                   width="18"
                                 />
+
                                 Delete
                               </button>
                             </div>
@@ -587,7 +599,6 @@ const ManageUsers = () => {
             </div>
           </>
         ) : !error ? (
-          /* Empty state */
           <div className="flex min-h-[380px] flex-col items-center justify-center px-6 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
               <Icon
@@ -602,17 +613,21 @@ const ManageUsers = () => {
             </h2>
 
             <p className="mt-2 max-w-md text-sm leading-6 text-gray-500">
-              {search || roleFilter !== "All Roles"
+              {searchQuery ||
+              roleFilter !== "All Roles"
                 ? "Try adjusting your search or filters."
                 : "There are currently no users to display."}
             </p>
 
-            {(search || roleFilter !== "All Roles") && (
+            {(searchQuery ||
+              roleFilter !== "All Roles") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearch("");
+                  setSearchQuery("");
                   setRoleFilter("All Roles");
+
                   setPagination((prev) => ({
                     ...prev,
                     page: 1,
